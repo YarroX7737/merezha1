@@ -622,15 +622,15 @@ table.tb tr.sum td { font-weight: 700; }
       if (id === sel) m.dragging.enable();
     } else {
       if (o.kind === 'sub') { drawSub(id, o); return; }
-      var pts = o.pts.map(LL), w = 3 + Math.min(o.fibers || 12, 144) / 144 * 4, g = L.featureGroup();
-      var casing = L.polyline(pts, { color: '#fff', weight: w + 4, opacity: .9, interactive: false });
+      var pts = o.pts.map(LL), w = 2 + Math.min(o.fibers || 12, 144) / 144 * 2.5, g = L.featureGroup();
+      var casing = L.polyline(pts, { color: '#fff', weight: w + 4, opacity: 0, interactive: false });
       var line = L.polyline(pts, { color: lineColor(o), weight: w, opacity: 1, dashArray: dashFor(o), lineCap: 'round', interactive: false });
       var hit = L.polyline(pts, { color: '#000', weight: 22, opacity: 0, bubblingMouseEvents: false });
       hit.on('click', function (e) { onObjClick(id, e.latlng, false); });
       hit.bindTooltip(lineLabel(o), { permanent: true, direction: 'center', className: 'lbl' });
       var pulse = null;
       if (o.signal === 'fwd' || o.signal === 'back') {
-        pulse = L.polyline(pts, { color: o.status === 'fault' ? '#ffd43b' : '#ffffff', weight: Math.max(3, w - 2), opacity: .95, dashArray: '0.1 19.9', lineCap: 'round', interactive: false, className: 'pulse' + (o.signal === 'back' ? ' rev' : '') });
+        pulse = L.polyline(pts, { color: o.status === 'fault' ? '#ffd43b' : '#ffffff', weight: Math.max(2, w - 0.5), opacity: .95, dashArray: '0.1 19.9', lineCap: 'round', interactive: false, className: 'pulse' + (o.signal === 'back' ? ' rev' : '') });
       }
       g.addLayer(casing).addLayer(line); if (pulse) g.addLayer(pulse); g.addLayer(hit); g.addTo(gObjs);
       shapes.set(id, { layer: g, casing: casing, line: line, hit: hit, pulse: pulse });
@@ -648,8 +648,8 @@ table.tb tr.sum td { font-weight: 700; }
   function drawSub(id, o) {
     if (!subVisible(o)) return;
     var pts = o.pts.map(LL), g = L.featureGroup();
-    var casing = L.polyline(pts, { color: '#fff', weight: 6, opacity: .9, interactive: false });
-    var line = L.polyline(pts, { color: lineColor(o), weight: 3, dashArray: dashFor(o), lineCap: 'round', interactive: false });
+    var casing = L.polyline(pts, { color: '#fff', weight: 4, opacity: 0, interactive: false });
+    var line = L.polyline(pts, { color: lineColor(o), weight: 2, dashArray: dashFor(o), lineCap: 'round', interactive: false });
     var hit = L.polyline(pts, { color: '#000', weight: 18, opacity: 0, bubblingMouseEvents: false });
     hit.on('click', function (e) { onObjClick(id, e.latlng, false); });
     var pin = L.marker(pts[pts.length - 1], { icon: subIcon(o), bubblingMouseEvents: false, keyboard: false });
@@ -769,9 +769,17 @@ table.tb tr.sum td { font-weight: 700; }
     }
   }
 
+  var boxTap = { id: null, t: 0 };
   function onObjClick(id, ll, isBox) {
-    if (tool === 'select') { select(id); return; }
     var o = objs.get(id);
+    if (tool === 'select') {
+      if (isBox && o && sel !== id) {
+        var now = Date.now();
+        if (!(boxTap.id === id && now - boxTap.t < 900)) { boxTap = { id: id, t: now }; toast((o.name || BOX[o.type]) + ': торкніться ще раз, щоб відкрити', 1400); return; }
+        boxTap = { id: null, t: 0 };
+      }
+      select(id); return;
+    }
     tapMap(ll, isBox && o ? [o.lng, o.lat] : null);
   }
   map.on('click', function (e) { tapMap(e.latlng, null); });
