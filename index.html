@@ -4,6 +4,12 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Мапа магістралей</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#0e1a20">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="icon-192.png">
+<link rel="apple-touch-icon" href="icon-192.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700&display=swap">
@@ -240,6 +246,47 @@ body { font-size: 15px; }
 #draftbar #draftInfo { flex: 1 1 100%; text-align: center; }
 #draftbar #draftUplink { flex: 1 1 0; }
 #draftbar .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
+
+/* --- нові можливості --- */
+.seg button { justify-content: center; }
+.seg[id="tools"] { grid-template-columns: repeat(4, 1fr); }
+#tools button { padding: 11px 4px; gap: 5px; font-size: 14px; }
+body.ro #tools [data-tool="line"], body.ro #tools [data-tool="box"] { display: none; }
+body.ro #tools { grid-template-columns: repeat(2, 1fr); }
+#measbar { position: absolute; left: 50%; transform: translateX(-50%); bottom: calc(96px + env(safe-area-inset-bottom, 0px)); z-index: 1100; display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; width: calc(100% - 24px); max-width: 420px; background: var(--panel); border: 1px solid #ff9f1c; border-radius: 16px; padding: 8px 8px 8px 14px; box-shadow: var(--shadow); font-size: 13px; }
+#measbar span { flex: 1 1 100%; text-align: center; font-family: var(--mono); font-size: 12px; }
+#measbar .btn { flex: 1 1 0; min-height: 44px; padding: 8px 6px; }
+.mtip { background: #ff9f1c; color: #1b1200; border: 0; font-weight: 700; font-size: 11px; padding: 1px 5px; box-shadow: none; }
+.mtip:before { display: none; }
+#list { position: fixed; inset: 0; z-index: 6500; background: rgba(5,10,14,.72); display: grid; place-items: end center; }
+#list .card { width: min(560px, 100%); height: min(88vh, 100%); background: var(--panel); border: 1px solid var(--line); border-radius: 18px 18px 0 0; display: flex; flex-direction: column; box-shadow: var(--shadow); overflow: hidden; }
+#list .lhead { display: flex; align-items: center; gap: 6px; padding: 10px 10px 8px 12px; border-bottom: 1px solid var(--line); }
+#list .ltabs { flex: 1; display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+#list .ltabs button { border: 0; background: transparent; padding: 9px 4px; font-weight: 600; font-size: 13.5px; }
+#list .ltabs button + button { border-left: 1px solid var(--line); }
+#list .ltabs button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+#listBody { flex: 1; overflow-y: auto; padding: 12px; display: grid; gap: 10px; align-content: start; padding-bottom: calc(16px + env(safe-area-inset-bottom, 0px)); }
+#listBody input, #listBody select { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 10px; font-size: 16px; }
+#listBody .frow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.li { display: grid; gap: 2px; text-align: left; width: 100%; border: 1px solid var(--line); background: transparent; border-radius: 10px; padding: 9px 12px; }
+.li b { font-size: 14px; }
+.li span { font-size: 12px; color: var(--muted); }
+.li .badge { display: inline-block; font-size: 11px; font-weight: 700; border-radius: 6px; padding: 1px 6px; margin-right: 6px; color: #fff; }
+.badge.plan { background: #6b7f8a; } .badge.built { background: #1f9d55; } .badge.fault { background: #d64545; }
+table.tb { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.tb th { text-align: left; font-size: 11.5px; color: var(--muted); font-weight: 600; padding: 4px 6px; }
+table.tb td { padding: 7px 6px; border-top: 1px solid var(--line); }
+table.tb td:last-child, table.tb th:last-child { text-align: right; }
+table.tb tr.sum td { font-weight: 700; }
+#listBody h3 { margin: 6px 0 0; font-size: 13px; color: var(--muted); font-weight: 600; }
+.fib { display: inline-block; width: 11px; height: 11px; border-radius: 50%; border: 1px solid rgba(255,255,255,.5); vertical-align: -1px; margin-right: 4px; }
+.spl { display: flex; align-items: center; gap: 6px; border: 1px solid var(--line); border-radius: 8px; padding: 7px 8px; font-size: 12.5px; }
+.spl > div { flex: 1; min-width: 0; }
+.spl button { border: 0; background: transparent; color: var(--bad); width: 30px; height: 30px; }
+.sform { display: grid; gap: 6px; border: 1px dashed var(--line); border-radius: 8px; padding: 8px; }
+.sform .r { display: grid; grid-template-columns: 1fr 74px; gap: 6px; }
+.sform select, .sform input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px; font-size: 15px; }
+#toast button { margin-left: 10px; border: 1px solid var(--bg); background: transparent; color: var(--bg); border-radius: 8px; padding: 3px 10px; font-weight: 700; }
 </style>
 </head>
 <body>
@@ -259,6 +306,7 @@ body { font-size: 15px; }
     <div class="fab">
       <button class="btn" id="btnLayer">Супутник</button>
       <button class="btn" id="btnPower" aria-pressed="false" title="Лінії електропередач і опори з OpenStreetMap">Електромережі</button>
+      <button class="btn" id="btnList">Список</button>
     </div>
     <div class="zoom"><button id="zin" aria-label="Збільшити">+</button><button id="zout" aria-label="Зменшити">−</button></div>
     <div id="draftbar" hidden>
@@ -268,6 +316,12 @@ body { font-size: 15px; }
       <button class="btn" id="draftCancel">Скасувати</button>
       <button class="btn primary" id="draftDone">Готово</button>
     </div>
+    <div id="measbar" hidden>
+      <span id="measInfo"></span>
+      <button class="btn" id="measUndo">↩ Назад</button>
+      <button class="btn" id="measClear">Скинути</button>
+      <button class="btn primary" id="measDone">Закрити</button>
+    </div>
     <div id="dock">
       <div class="hint" id="hint"></div>
       <div class="chips" id="chips" hidden></div>
@@ -275,11 +329,14 @@ body { font-size: 15px; }
         <button data-tool="select" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg>Вибір</button>
         <button data-tool="line" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 18l6-9 5 5 5-8"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="6" r="1.5"/></svg>Лінія</button>
         <button data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M12 9v6M9 12h6"/></svg>Бокс</button>
+        <button data-tool="measure" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 16l13-13 5 5-13 13z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg>Міряти</button>
       </div>
     </div>
     <div id="menu" hidden>
       <button class="btn" id="mFit">Показати обидві області</button>
       <button class="btn" id="mFitObj">Показати мої об'єкти</button>
+      <button class="btn" id="mList">Список, облік кабелю, кошик</button>
+      <button class="btn" id="mInstall">Встановити як додаток</button>
       <button class="btn" id="mCloud">Хмара: вхід і налаштування</button>
       <button class="btn" id="mLogout">Вийти з хмари</button>
       <div class="goto"><input id="gotoIn" type="text" inputmode="decimal" placeholder="50.4501, 30.5234" aria-label="Координати"><button class="btn" id="gotoBtn">Перейти</button></div>
@@ -322,6 +379,15 @@ body { font-size: 15px; }
   </div>
 </div>
 <div id="toast" hidden></div>
+<div id="list" hidden>
+  <div class="card">
+    <div class="lhead">
+      <div class="ltabs"><button data-tab="obj" aria-pressed="true">Об’єкти</button><button data-tab="cab" aria-pressed="false">Кабель</button><button data-tab="tr" aria-pressed="false">Кошик</button></div>
+      <button class="x" id="listClose" aria-label="Закрити"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    </div>
+    <div id="listBody"></div>
+  </div>
+</div>
 <input type="file" id="photoIn" accept="image/*" multiple hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 <input type="file" id="impIn" accept=".json,.geojson,application/json,application/geo+json" hidden>
@@ -380,6 +446,10 @@ body { font-size: 15px; }
   function uid() { return 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
 
   var toastT = 0;
+  function toastAct(msg, label, fn, ms) {
+    var t = $('#toast'); t.textContent = msg; var b = document.createElement('button'); b.textContent = label;
+    b.onclick = function () { t.hidden = true; fn(); }; t.appendChild(b); t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, ms || 8000);
+  }
   function toast(msg, ms) { var t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, ms || 2800); }
 
   /* ---------- IndexedDB (дані і фото лишаються в браузері) ---------- */
@@ -405,7 +475,7 @@ body { font-size: 15px; }
   /* ---------- state ---------- */
   var objs = new Map(), shapes = new Map();
   var sel = null, selVtx = null, tool = 'select', boxType = 'fob', draft = [], lastFibers = 12;
-  var saveT = new Map(), armedDelete = null;
+  var saveT = new Map(), armedDelete = null, RO = false;
 
   var map = L.map('map', { zoomControl: false, maxZoom: 19, minZoom: 5, zoomSnap: 0.5 });
   L.control.scale({ metric: true, imperial: false, position: 'topleft' }).addTo(map);
@@ -501,14 +571,34 @@ body { font-size: 15px; }
 
   /* ---------- збереження ---------- */
   function queueSave(id, delay) {
+    if (RO) return;
     clearTimeout(saveT.get(id));
     saveT.set(id, setTimeout(function () { saveT.delete(id); var o = objs.get(id); if (o) { dbPut('objs', JSON.parse(JSON.stringify(o))).catch(function () { toast('Не вдалося зберегти зміни.'); }); cloudPut(id); } }, delay == null ? 400 : delay));
   }
-  function removeObj(id) {
-    var o = objs.get(id); if (!o) return;
-    if (o.kind === 'box') Array.from(objs.values()).forEach(function (x) { if (x.kind === 'sub' && x.boxId === id) removeObj(x.id); });
+  var trash = lsGet('mm-trash', []);
+  function saveTrash() { lsSet('mm-trash', trash); }
+  function purgeGroup(g) {
+    var ids = []; g.items.forEach(function (o) { (o.photos || []).forEach(function (p) { ids.push(p.id); dbDel('photos', p.id); }); });
+    if (ids.length && sb && cloudReady) sb.storage.from('photos').remove(ids).catch(function () {});
+  }
+  function trimTrash() {
+    var lim = Date.now() - 30 * 864e5;
+    while (trash.length > 40 || (trash.length && trash[trash.length - 1].at < lim)) purgeGroup(trash.pop());
+  }
+  function removeObj(id, grp) {
+    var o = objs.get(id); if (!o) return null;
+    var top = !grp; if (top) grp = { at: Date.now(), items: [] };
+    grp.items.push(JSON.parse(JSON.stringify(o)));
+    if (o.kind === 'box') Array.from(objs.values()).forEach(function (x) { if (x.kind === 'sub' && x.boxId === id) removeObj(x.id, grp); });
     objs.delete(id); clearTimeout(saveT.get(id)); undraw(id);
-    dbDel('objs', id); (o.photos || []).forEach(function (p) { dbDel('photos', p.id); }); cloudDel(id, (o.photos || []).map(function (p) { return p.id; }));
+    dbDel('objs', id); cloudDel(id, []);
+    if (top) { trash.unshift(grp); trimTrash(); saveTrash(); }
+    return grp;
+  }
+  function restoreGroup(g) {
+    var i = trash.indexOf(g); if (i >= 0) trash.splice(i, 1); saveTrash();
+    g.items.forEach(function (o) { objs.set(o.id, o); dbPut('objs', JSON.parse(JSON.stringify(o))); draw(o.id); cloudPut(o.id); });
+    updateStats();
   }
 
   /* ---------- малювання об'єктів ---------- */
@@ -599,7 +689,7 @@ body { font-size: 15px; }
   function updateStats() {
     var b = 0, l = 0, len = 0, sc = 0;
     objs.forEach(function (o) { if (o.kind === 'box') b++; else if (o.kind === 'sub') sc++; else { l++; len += lineLen(o.pts || []); } });
-    $('#stats').textContent = b + ' ' + plural(b, ['бокс', 'бокси', 'боксів']) + ' · ' + l + ' ' + plural(l, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(len) + (sc ? ' · ' + sc + ' ' + plural(sc, ['абонент', 'абоненти', 'абонентів']) : '') + (cloudLabel ? ' · ' + cloudLabel : '');
+    $('#stats').textContent = b + ' ' + plural(b, ['бокс', 'бокси', 'боксів']) + ' · ' + l + ' ' + plural(l, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(len) + (sc ? ' · ' + sc + ' ' + plural(sc, ['абонент', 'абоненти', 'абонентів']) : '') + (RO ? ' · лише перегляд' : '') + (cloudLabel ? ' · ' + cloudLabel : '');
   }
   function fitObjs() {
     var pts = [];
@@ -618,11 +708,12 @@ body { font-size: 15px; }
     var prev = sel; sel = id; selVtx = null; armedDelete = null;
     if (prev && prev !== id) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } }
     var o = objs.get(id); if (!o) return closePanel();
-    if (o.kind === 'box') { var s = shapes.get(id); if (s) { s.marker.setIcon(mkIcon(o)); s.marker.dragging.enable(); } }
+    if (o.kind === 'box') { var s = shapes.get(id); if (s) { s.marker.setIcon(mkIcon(o)); if (!RO) s.marker.dragging.enable(); } }
     redrawSubs(); rebuildHandles(); openPanel();
   }
   function deselect() { var prev = sel; sel = null; selVtx = null; if (prev) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } } redrawSubs(); rebuildHandles(); closePanel(); }
   function rebuildHandles() {
+    if (RO) { gHandles.clearLayers(); return; }
     gHandles.clearLayers();
     subHandle = null;
     var o = sel && objs.get(sel); if (!o) return;
@@ -688,6 +779,7 @@ body { font-size: 15px; }
 
   function tapMap(ll, snapPt) {
     if (tool === 'select') { if (sel) deselect(); return; }
+    if (tool === 'measure') { mpts.push(snapPt || snapBox(ll, 16) || [ll.lng, ll.lat]); drawMeas(); return; }
     if (tool === 'line' || tool === 'sub') { draft.push(snapPt || (tool === 'line' ? snapBox(ll, 16) : null) || [ll.lng, ll.lat]); drawDraft(); return; }
     if (tool === 'box') {
       var q = snapPt || [ll.lng, ll.lat], n = 1; objs.forEach(function (x) { if (x.kind === 'box' && x.type === boxType) n++; });
@@ -735,17 +827,39 @@ body { font-size: 15px; }
     select: 'Торкніться бокса, щоб побачити його абонентів, або лінії, щоб відкрити опис. Адресу шукайте зверху.',
     line: 'Торкайтесь точок траси по порядку. Біля бокса точка прилипне до нього.',
     box: 'Оберіть тип і торкніться місця на карті. Адреса підтягнеться сама.',
-    sub: 'Торкайтесь точок траси до абонента. Остання точка — місце абонента. Потім «Готово».'
+    sub: 'Торкайтесь точок траси до абонента. Остання точка — місце абонента. Потім «Готово».',
+    measure: 'Торкайтесь точок по порядку — внизу побачите довжину. Біля бокса точка прилипне до нього.'
   };
+  var mpts = [], gMeas = L.layerGroup().addTo(map);
+  function drawMeas() {
+    gMeas.clearLayers();
+    if (mpts.length) {
+      L.polyline(mpts.map(LL), { color: '#ff9f1c', weight: 4, dashArray: '8 6', interactive: false }).addTo(gMeas);
+      var acc = 0;
+      mpts.forEach(function (p, i) {
+        if (i) acc += dist(mpts[i - 1], p);
+        var m = L.circleMarker(LL(p), { radius: 5, color: '#fff', weight: 2, fillColor: '#ff9f1c', fillOpacity: 1, interactive: false }).addTo(gMeas);
+        if (i) m.bindTooltip(fmtLen(acc), { permanent: true, direction: 'top', offset: [0, -6], className: 'mtip' });
+      });
+    }
+    $('#measbar').hidden = tool !== 'measure';
+    $('#measInfo').textContent = mpts.length < 2 ? 'Лінійка · поставте точки на карті' : 'Лінійка · ' + mpts.length + ' ' + plural(mpts.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(mpts));
+    $('#measUndo').disabled = !mpts.length; $('#measUndo').style.opacity = mpts.length ? 1 : .5;
+  }
+  $('#measUndo').onclick = function () { mpts.pop(); drawMeas(); };
+  $('#measClear').onclick = function () { mpts = []; drawMeas(); };
+  $('#measDone').onclick = function () { mpts = []; setTool('select'); drawMeas(); };
   function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
   var chipsOpen = false;
   function boxHint() { return 'Торкніться карти, щоб поставити: ' + BOX[boxType] + '. Щоб змінити тип, натисніть «Бокс» ще раз.'; }
   function setTool(t) {
+    if (RO && (t === 'line' || t === 'box' || t === 'sub')) t = 'select';
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
+    if (t !== 'measure' && mpts.length) { mpts = []; drawMeas(); }
     tool = t;
     document.querySelectorAll('#tools [data-tool]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tool === t)); });
     $('#hint').textContent = t === 'box' ? boxHint() : HINTS[t]; if (t !== 'box') chipsOpen = false; $('#chips').hidden = !(t === 'box' && chipsOpen);
-    $('#map').classList.toggle('draw', t !== 'select');
+    $('#map').classList.toggle('draw', t !== 'select'); drawMeas();
     if (t !== 'select' && sel) deselect();
   }
   $('#tools').addEventListener('click', function (e) {
@@ -836,11 +950,50 @@ body { font-size: 15px; }
         '<button class="btn" data-act="addsub">+ Додати абонента по точках</button>' +
         '<p class="note">Або потягніть зелений «+» поруч із боксом на карті до місця абонента. Лінії абонентів видно, лише поки вибрано бокс або абонента.</p></div>';
     }
+    if (!isLine) h += fibreHTML(o);
     var ph = o.photos || [];
     h += '<div class="f"><span class="lab">Фото' + (ph.length ? ' · ' + ph.length : '') + '</span><div class="photos">' + ph.map(function (p, i) { return '<button class="thumb" data-act="photo" data-i="' + i + '" aria-label="Фото ' + (i + 1) + '"><img alt="" data-pid="' + esc(p.id) + '"></button>'; }).join('') + '<button class="thumb add" data-act="addphoto">+ Додати</button></div></div>';
     h += '<button class="btn danger block" data-act="del">Видалити ' + (isLine ? 'лінію' : 'бокс') + '</button>';
     return h;
   }
+  /* ---------- схема волокон у боксі ---------- */
+  var FCOL = [['синій', '#2f6fdb'], ['помаранчевий', '#f28c28'], ['зелений', '#2fa84f'], ['коричневий', '#8b5a2b'], ['сірий', '#9aa5ab'], ['білий', '#f4f4f4'], ['червоний', '#e04646'], ['чорний', '#222'], ['жовтий', '#f2d024'], ['фіолетовий', '#8e55c7'], ['рожевий', '#f08fb5'], ['блакитний', '#4fc3e8']];
+  function fibLab(n) { var c = FCOL[(n - 1) % 12], m = Math.ceil(n / 12); return '<i class="fib" style="background:' + c[1] + '"></i>№' + n + ' ' + c[0] + (n > 12 ? ' (мод. ' + m + ')' : ''); }
+  function nearLines(b) {
+    var out = [], me = [b.lng, b.lat];
+    objs.forEach(function (l) { if (l.kind === 'line' && l.pts.some(function (p) { return dist(p, me) < 25; })) out.push(l); });
+    return out;
+  }
+  function fibreHTML(o) {
+    var ls = nearLines(o), sp = o.splices || [];
+    var h = '<div class="f"><span class="lab">Схема волокон' + (sp.length ? ' · ' + sp.length : '') + '</span>';
+    if (!ls.length) return h + '<p class="note">Тут ще немає кабелів. Проведіть магістраль до цього бокса (кінець лінії прилипає до бокса), і тут можна буде записати, яке волокно з яким зварене.</p></div>';
+    var used = {}; sp.forEach(function (x) { [x.a, x.b].forEach(function (e) { if (e && e.l) (used[e.l] = used[e.l] || {})[e.f] = 1; }); });
+    h += ls.map(function (l) { var u = Object.keys(used[l.id] || {}).length; return '<div class="note">' + esc(l.name || 'Лінія') + ' · ' + (l.cable ? esc(l.cable) + ' · ' : '') + l.fibers + ' вол · зайнято ' + u + ', вільно ' + Math.max(0, l.fibers - u) + '</div>'; }).join('');
+    var tot = 0;
+    sp.forEach(function (x, i) {
+      var la = objs.get(x.a.l), lb = x.b && x.b.l ? objs.get(x.b.l) : null; tot += parseFloat(String(x.loss).replace(',', '.')) || 0;
+      h += '<div class="spl"><div>' + esc(la ? la.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.a.f) + '<br>⇄ ' + (x.b && x.b.l ? esc(lb ? lb.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.b.f) : '<b>' + esc(x.to || 'інше') + '</b>') + (x.loss !== '' && x.loss != null ? ' · ' + esc(String(x.loss)) + ' дБ' : '') + (x.note ? '<br><span class="note">' + esc(x.note) + '</span>' : '') + '</div><button data-act="spdel" data-i="' + i + '" aria-label="Видалити з’єднання">✕</button></div>';
+    });
+    if (sp.length) h += '<div class="note">Усього зварів: ' + sp.length + ' · сумарні втрати ≈ ' + tot.toFixed(2).replace('.', ',') + ' дБ</div>';
+    var lopt = ls.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.name || 'Лінія') + ' (' + l.fibers + ')</option>'; }).join('');
+    h += '<div class="sform"><div class="r"><select data-sp="al">' + lopt + '</select><input data-sp="af" type="number" min="1" inputmode="numeric" placeholder="№ вол."></div>' +
+      '<div class="r"><select data-sp="bl"><option value="">Інше (написати нижче)</option>' + lopt + '</select><input data-sp="bf" type="number" min="1" inputmode="numeric" placeholder="№ вол."></div>' +
+      '<input data-sp="to" type="text" placeholder="Якщо «інше»: куди (PON 1, спліттер 1:8, абонент…)" autocomplete="off">' +
+      '<div class="r"><input data-sp="note" type="text" placeholder="Примітка" autocomplete="off"><input data-sp="loss" type="text" inputmode="decimal" placeholder="дБ" value="0,1"></div>' +
+      '<button class="btn" data-act="spadd">+ Додати з’єднання</button></div>';
+    return h + '</div>';
+  }
+  function addSplice(o) {
+    var g = function (k) { var e = panelBody.querySelector('[data-sp="' + k + '"]'); return e ? e.value.trim() : ''; };
+    var la = objs.get(g('al')), af = parseInt(g('af'), 10), bl = g('bl'), lb = bl ? objs.get(bl) : null, bf = parseInt(g('bf'), 10);
+    if (!la || !(af >= 1 && af <= la.fibers)) { toast('Вкажіть номер волокна першого кабелю (1–' + (la ? la.fibers : '?') + ')', 3500); return; }
+    var x = { a: { l: la.id, f: af }, loss: g('loss'), note: g('note') };
+    if (bl) { if (!lb || !(bf >= 1 && bf <= lb.fibers)) { toast('Вкажіть номер волокна другого кабелю (1–' + (lb ? lb.fibers : '?') + ')', 3500); return; } x.b = { l: lb.id, f: bf }; }
+    else { if (!g('to')) { toast('Напишіть, куди йде волокно, або оберіть другий кабель', 3500); return; } x.to = g('to'); }
+    (o.splices = o.splices || []).push(x); queueSave(o.id, 100); refreshPanel();
+  }
+
   var urlCache = new Map();
   async function photoURL(id) {
     if (urlCache.has(id)) return urlCache.get(id);
@@ -852,9 +1005,15 @@ body { font-size: 15px; }
     var u = URL.createObjectURL(r.blob); urlCache.set(id, u); return u;
   }
   function hydrate(root) { root.querySelectorAll('img[data-pid]').forEach(function (im) { photoURL(im.dataset.pid).then(function (u) { if (u) im.src = u; }); }); }
-  function openPanel() { var o = sel && objs.get(sel); if (!o) return; panelBody.innerHTML = panelHTML(o); hydrate(panelBody); panel.hidden = false; appEl.classList.add('panel-open'); panelBody.scrollTop = 0; setTimeout(function () { map.invalidateSize(); }, 50); }
+  function roLock() {
+    if (!RO) return;
+    panelBody.querySelectorAll('input,textarea,select').forEach(function (x) { x.disabled = true; });
+    panelBody.querySelectorAll('button').forEach(function (b) { var a = b.dataset.act; if (a === 'photo' || a === 'close' || a === 'opensub' || a === 'tobox' || a === 'copy') return; b.style.display = 'none'; });
+    panelBody.querySelectorAll('.sform,.note').forEach(function (x) { x.style.display = 'none'; });
+  }
+  function openPanel() { var o = sel && objs.get(sel); if (!o) return; panelBody.innerHTML = panelHTML(o); roLock(); hydrate(panelBody); panel.hidden = false; appEl.classList.add('panel-open'); panelBody.scrollTop = 0; setTimeout(function () { map.invalidateSize(); }, 50); }
   function closePanel() { panel.hidden = true; appEl.classList.remove('panel-open'); setTimeout(function () { map.invalidateSize(); }, 50); }
-  function refreshPanel() { var o = sel && objs.get(sel); if (!o || panel.hidden) return; var st = panelBody.scrollTop; panelBody.innerHTML = panelHTML(o); hydrate(panelBody); panelBody.scrollTop = st; }
+  function refreshPanel() { var o = sel && objs.get(sel); if (!o || panel.hidden) return; var st = panelBody.scrollTop; panelBody.innerHTML = panelHTML(o); roLock(); hydrate(panelBody); panelBody.scrollTop = st; }
 
   panel.addEventListener('input', function (e) {
     var o0 = sel && objs.get(sel);
@@ -887,13 +1046,15 @@ body { font-size: 15px; }
     else if (act === 'ports' && o) { o.ports = parseInt(b.dataset.v, 10); if (!o.pons) o.pons = []; while (o.pons.length < 8) o.pons.push(''); draw(sel); var sp = shapes.get(sel); if (sp && sp.marker) sp.marker.dragging.enable(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'signal' && o && o.kind === 'line') { o.signal = b.dataset.v === 'off' ? '' : b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'extend' && o && o.kind === 'line') startExtend(sel, b.dataset.v);
+    else if (act === 'spadd' && o) addSplice(o);
+    else if (act === 'spdel' && o && o.splices) { o.splices.splice(parseInt(b.dataset.i, 10), 1); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'copy' && o) copyCoord(o);
     else if (act === 'addphoto') $('#photoIn').click();
     else if (act === 'photo') openLightbox(parseInt(b.dataset.i, 10));
     else if (act === 'delvtx' && o && selVtx != null && o.pts.length > 2) { o.pts.splice(selVtx, 1); selVtx = null; setLineGeom(sel); queueSave(sel, 100); updateStats(); rebuildHandles(); refreshPanel(); }
     else if (act === 'del' && o) {
       if (armedDelete !== sel) { armedDelete = sel; b.classList.add('armed'); b.textContent = 'Торкніться ще раз, щоб видалити'; setTimeout(function () { if (armedDelete === sel && b.isConnected) { armedDelete = null; b.classList.remove('armed'); b.textContent = delLabel(o); } }, 3500); }
-      else { var id = sel, parent = o.kind === 'sub' ? o.boxId : null; deselect(); removeObj(id); updateStats(); toast('Видалено'); if (parent && objs.get(parent)) select(parent); }
+      else { var id = sel, parent = o.kind === 'sub' ? o.boxId : null; deselect(); var grp = removeObj(id); updateStats(); toastAct('Видалено', 'Скасувати', function () { restoreGroup(grp); toast('Відновлено'); }, 9000); if (parent && objs.get(parent)) select(parent); }
     }
   });
   function copyCoord(o) {
@@ -1053,6 +1214,12 @@ body { font-size: 15px; }
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   var dirty = new Set(lsGet('mm-dirty', [])), tomb = new Set(lsGet('mm-tomb', [])), syncedIds = new Set(lsGet('mm-synced', [])), uploadedPhotos = new Set(lsGet('mm-photos-up', []));
   function persistSets() { lsSet('mm-dirty', Array.from(dirty)); lsSet('mm-tomb', Array.from(tomb)); lsSet('mm-synced', Array.from(syncedIds)); }
+  function applyRole(user) {
+    var r = user && user.app_metadata && user.app_metadata.role;
+    RO = r === 'viewer'; document.body.classList.toggle('ro', RO);
+    if (RO) { dirty.clear(); tomb.clear(); persistSets(); if (tool === 'line' || tool === 'box') setTool('select'); }
+    updateStats();
+  }
   function setCloud(label) { cloudLabel = label; updateStats(); }
   function supaCfg() {
     var c = { url: SUPA.url, key: SUPA.key };
@@ -1076,6 +1243,7 @@ body { font-size: 15px; }
     }
   }
   function cloudPut(id) {
+    if (RO) return Promise.resolve();
     dirty.add(id); persistSets();
     if (!cloudReady) return Promise.resolve();
     var p = (cloudChain.get(id) || Promise.resolve()).then(async function () {
@@ -1091,6 +1259,7 @@ body { font-size: 15px; }
     cloudChain.set(id, p); return p;
   }
   async function cloudDel(id, photoIds) {
+    if (RO) return;
     dirty.delete(id);
     if (!cloudReady) { tomb.add(id); persistSets(); return; }
     try {
@@ -1165,7 +1334,7 @@ body { font-size: 15px; }
     try {
       var r = await sb.auth.signInWithPassword({ email: email, password: pass });
       if (r.error) { msg.textContent = /invalid/i.test(r.error.message) ? 'Невірна пошта чи пароль.' : 'Не вдалося увійти: ' + r.error.message; return; }
-      loginEl.hidden = true; $('#authPass').value = ''; lsSet('mm-nocloud', 0); cloudReady = true; toast('Вхід виконано');
+      loginEl.hidden = true; $('#authPass').value = ''; lsSet('mm-nocloud', 0); applyRole(r.data && r.data.user); cloudReady = true; toast('Вхід виконано');
       await syncAll();
     } catch (e) { msg.textContent = 'Немає зв’язку з хмарою. Перевірте інтернет і адресу проєкту.'; }
     finally { btn.disabled = false; }
@@ -1174,7 +1343,7 @@ body { font-size: 15px; }
   $('#mLogout').onclick = async function () {
     menu.hidden = true; if (!sb) { toast('Хмара не підключена'); return; }
     try { await sb.auth.signOut(); } catch (e) {}
-    cloudReady = false; if (rtChan) { try { sb.removeChannel(rtChan); } catch (e) {} rtChan = null; }
+    cloudReady = false; applyRole(null); if (rtChan) { try { sb.removeChannel(rtChan); } catch (e) {} rtChan = null; }
     setCloud('локально'); toast('Ви вийшли з хмари. Дані лишились на цьому пристрої.', 3500);
   };
   async function startCloud() {
@@ -1184,12 +1353,12 @@ body { font-size: 15px; }
     if (!sb) makeClient();
     try {
       var s = await sb.auth.getSession();
-      if (s.data && s.data.session) { cloudReady = true; await syncAll(); } else { setCloud('локально, потрібен вхід'); showLogin(); }
+      if (s.data && s.data.session) { applyRole(s.data.session.user); cloudReady = true; await syncAll(); } else { setCloud('локально, потрібен вхід'); showLogin(); }
     } catch (e) { setCloud('☁ немає зв’язку'); }
   }
   async function retryCloud() {
     if (!sb) return;
-    try { var s = await sb.auth.getSession(); if (s.data && s.data.session) { cloudReady = true; await syncAll(); } } catch (e) {}
+    try { var s = await sb.auth.getSession(); if (s.data && s.data.session) { applyRole(s.data.session.user); cloudReady = true; await syncAll(); } } catch (e) {}
   }
   window.addEventListener('online', function () { if (sb && !cloudReady) retryCloud(); else if (cloudReady) syncAll(); });
   $('#btnSave').onclick = async function () {
@@ -1206,6 +1375,107 @@ body { font-size: 15px; }
   };
   setInterval(function () { if (cloudReady && (dirty.size || tomb.size)) syncAll(); }, 30000);
 
+  /* ---------- список, облік кабелю, кошик ---------- */
+  var listEl = $('#list'), listBody = $('#listBody'), listTab = 'obj', lf = { q: '', type: '', st: '' };
+  var KINDLAB = { line: 'Лінія', sub: 'Абонент' };
+  function typeLab(o) { return o.kind === 'box' ? (BOX[o.type] || 'Бокс') : KINDLAB[o.kind]; }
+  function stLab(o) { return (o.kind === 'sub' ? SUBST : STATUS)[o.status] || ''; }
+  function objText(o) { return [o.name, o.address, o.desc, o.cable, (o.pons || []).join(' ')].join(' ').toLowerCase(); }
+  function renderResults() {
+    var q = lf.q.trim().toLowerCase(), out = [];
+    objs.forEach(function (o) {
+      if (lf.type && (lf.type === 'line' || lf.type === 'sub' ? o.kind !== lf.type : !(o.kind === 'box' && (o.type === lf.type || (lf.type === 'fob' && BOX_HIDDEN[o.type]))))) return;
+      if (lf.st && o.status !== lf.st) return;
+      if (q && objText(o).indexOf(q) < 0) return;
+      out.push(o);
+    });
+    out.sort(function (a, b) { return (a.name || '').localeCompare(b.name || '', 'uk', { numeric: true }); });
+    var res = $('#lres'); if (!res) return;
+    res.innerHTML = '<div class="note">Знайдено: ' + out.length + '</div>' + out.slice(0, 200).map(function (o) {
+      var ex = o.kind === 'line' ? fmtLen(lineLen(o.pts)) + ' · ' + o.fibers + ' вол' + (o.cable ? ' · ' + esc(o.cable) : '') : esc(o.address || '');
+      return '<button class="li" data-id="' + esc(o.id) + '"><b>' + esc(o.name || 'Без назви') + '</b><span><i class="badge ' + o.status + '">' + esc(stLab(o)) + '</i>' + esc(typeLab(o)) + (ex ? ' · ' + ex : '') + '</span></button>';
+    }).join('') + (out.length > 200 ? '<div class="note">Показано перші 200. Уточніть пошук.</div>' : '');
+  }
+  function lenByKey(fn, filt) {
+    var m = {}; objs.forEach(function (o) { if (o.kind !== 'line' || (filt && !filt(o))) return; var k = fn(o); var r = m[k] || (m[k] = { n: 0, len: 0 }); r.n++; r.len += lineLen(o.pts); }); return m;
+  }
+  function tbl(m, h1) {
+    var ks = Object.keys(m).sort(function (a, b) { return m[b].len - m[a].len; }), n = 0, t = 0;
+    return '<table class="tb"><tr><th>' + h1 + '</th><th>Ліній</th><th>Довжина</th></tr>' + ks.map(function (k) { n += m[k].n; t += m[k].len; return '<tr><td>' + esc(k) + '</td><td>' + m[k].n + '</td><td>' + fmtLen(m[k].len) + '</td></tr>'; }).join('') + '<tr class="sum"><td>Разом</td><td>' + n + '</td><td>' + fmtLen(t) + '</td></tr></table>';
+  }
+  function renderCab() {
+    var any = false; objs.forEach(function (o) { if (o.kind === 'line') any = true; });
+    if (!any) { listBody.innerHTML = '<p class="note">Ліній ще немає.</p>'; return; }
+    var sub = 0, subN = 0; objs.forEach(function (o) { if (o.kind === 'sub') { subN++; sub += lineLen(o.pts); } });
+    listBody.innerHTML = '<h3>За маркою кабелю</h3>' + tbl(lenByKey(function (o) { return (o.cable || '').trim() || 'Марку не вказано'; }), 'Марка') +
+      '<h3>За способом прокладки</h3>' + tbl(lenByKey(function (o) { return LAYING[o.laying] || 'Не вказано'; }), 'Прокладка') +
+      '<h3>За станом</h3>' + tbl(lenByKey(function (o) { return STATUS[o.status] || '—'; }), 'Стан') +
+      '<h3>За кількістю волокон</h3>' + tbl(lenByKey(function (o) { return (o.fibers || '?') + ' вол'; }), 'Кабель') +
+      (subN ? '<h3>Абонентські лінії</h3><p class="note">' + subN + ' ' + plural(subN, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(sub) + '</p>' : '') +
+      '<button class="btn" id="csvBtn">Завантажити таблицю (CSV для Excel)</button>';
+  }
+  function exportCsv() {
+    var rows = [['Тип', 'Назва', 'Стан', 'Адреса', 'Марка кабелю', 'Волокон', 'Прокладка', 'Довжина, м', 'Широта', 'Довгота', 'Опис']];
+    objs.forEach(function (o) {
+      var p = posOf(o); rows.push([typeLab(o), o.name || '', stLab(o), o.address || '', o.cable || '', o.fibers || '', o.laying ? LAYING[o.laying] : '', o.pts ? Math.round(lineLen(o.pts)) : '', p.lat.toFixed(6), p.lng.toFixed(6), (o.desc || '').replace(/\s+/g, ' ')]);
+    });
+    var csv = '\ufeff' + rows.map(function (r) { return r.map(function (c) { c = String(c); return /[";\n]/.test(c) ? '"' + c.replace(/"/g, '""') + '"' : c; }).join(';'); }).join('\r\n');
+    download('merezha-oblik-' + stamp() + '.csv', csv, 'text/csv;charset=utf-8'); toast('Таблицю збережено');
+  }
+  function ago(t) { var m = Math.round((Date.now() - t) / 60000); if (m < 1) return 'щойно'; if (m < 60) return m + ' хв тому'; var h = Math.round(m / 60); if (h < 24) return h + ' год тому'; return Math.round(h / 24) + ' дн тому'; }
+  function renderTrash() {
+    if (!trash.length) { listBody.innerHTML = '<p class="note">Кошик порожній. Видалені об’єкти зберігаються тут 30 днів на цьому пристрої, і їх можна повернути.</p>'; return; }
+    listBody.innerHTML = '<p class="note">Видалені об’єкти зберігаються 30 днів на цьому пристрої.</p>' + trash.map(function (g, i) {
+      var o = g.items[0], extra = g.items.length > 1 ? ' + абонентів: ' + (g.items.length - 1) : '';
+      return '<div class="spl"><div><b>' + esc(o.name || 'Без назви') + '</b><br><span class="note">' + esc(typeLab(o)) + extra + ' · ' + ago(g.at) + '</span></div>' + (RO ? '' : '<button class="btn" data-restore="' + i + '" style="color:var(--ink);width:auto;height:auto;padding:6px 10px">Відновити</button>') + '</div>';
+    }).join('') + (RO ? '' : '<button class="btn danger" id="trClear">Очистити кошик назавжди</button>');
+  }
+  function renderList() {
+    document.querySelectorAll('#list .ltabs button').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tab === listTab)); });
+    if (listTab === 'cab') return renderCab();
+    if (listTab === 'tr') return renderTrash();
+    listBody.innerHTML = '<input id="lq" type="search" placeholder="Назва, адреса, марка кабелю…" autocomplete="off" value="' + esc(lf.q) + '">' +
+      '<div class="frow"><select id="lt"><option value="">Усі типи</option><option value="line">Лінії</option><option value="sub">Абоненти</option>' + Object.keys(BOXVIS).map(function (k) { return '<option value="' + k + '">' + esc(BOX[k]) + '</option>'; }).join('') + '</select>' +
+      '<select id="ls"><option value="">Усі стани</option>' + Object.keys(STATUS).map(function (k) { return '<option value="' + k + '">' + STATUS[k] + '</option>'; }).join('') + '</select></div><div id="lres" style="display:grid;gap:6px"></div>';
+    $('#lt').value = lf.type; $('#ls').value = lf.st; renderResults();
+  }
+  function openList(tab) { listTab = tab || listTab; listEl.hidden = false; menu.hidden = true; renderList(); }
+  $('#btnList').onclick = function () { openList(); };
+  $('#mList').onclick = function () { openList(); };
+  $('#listClose').onclick = function () { listEl.hidden = true; };
+  listEl.addEventListener('click', function (e) { if (e.target === listEl) listEl.hidden = true; });
+  $('#list .ltabs').addEventListener('click', function (e) { var b = e.target.closest('[data-tab]'); if (b) { listTab = b.dataset.tab; renderList(); } });
+  listBody.addEventListener('input', function (e) { if (e.target.id === 'lq') { lf.q = e.target.value; renderResults(); } });
+  listBody.addEventListener('change', function (e) { if (e.target.id === 'lt') { lf.type = e.target.value; renderResults(); } else if (e.target.id === 'ls') { lf.st = e.target.value; renderResults(); } });
+  listBody.addEventListener('click', function (e) {
+    var li = e.target.closest('.li');
+    if (li) {
+      var o = objs.get(li.dataset.id); if (!o) return; listEl.hidden = true; setTool('select'); select(o.id);
+      var pts = o.kind === 'box' ? [[o.lat, o.lng]] : o.pts.map(LL);
+      if (pts.length === 1) map.setView(pts[0], Math.max(map.getZoom(), 18)); else map.fitBounds(L.latLngBounds(pts), { padding: [70, 70], maxZoom: 18 });
+      return;
+    }
+    if (e.target.id === 'csvBtn') return exportCsv();
+    var rb = e.target.closest('[data-restore]');
+    if (rb) { var g = trash[+rb.dataset.restore]; if (g) { restoreGroup(g); toast('Відновлено'); renderTrash(); } return; }
+    if (e.target.id === 'trClear') {
+      var b = e.target; if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Торкніться ще раз: це назавжди'; setTimeout(function () { if (b.isConnected) { delete b.dataset.armed; b.textContent = 'Очистити кошик назавжди'; } }, 3500); return; }
+      trash.splice(0).forEach(purgeGroup); saveTrash(); renderTrash();
+    }
+  });
+
+  /* ---------- встановлення як додаток (PWA) ---------- */
+  var installEv = null;
+  window.addEventListener('beforeinstallprompt', function (e) { e.preventDefault(); installEv = e; });
+  window.addEventListener('appinstalled', function () { installEv = null; toast('Додаток встановлено'); });
+  $('#mInstall').onclick = function () {
+    menu.hidden = true;
+    if (window.matchMedia && matchMedia('(display-mode: standalone)').matches) { toast('Уже відкрито як додаток'); return; }
+    if (installEv) { installEv.prompt(); installEv = null; return; }
+    toast('Відкрийте меню браузера (⋮) і оберіть «Встановити додаток» або «Додати на головний екран».', 7000);
+  };
+  if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) window.addEventListener('load', function () { navigator.serviceWorker.register('sw.js').catch(function () {}); });
+
   /* ---------- запуск ---------- */
   async function init() {
     buildChips(); setTool('select'); drawDraft();
@@ -1215,7 +1485,7 @@ body { font-size: 15px; }
     rows.forEach(function (o) { objs.set(o.id, o); draw(o.id); });
     updateStats(); if (rows.length && !restored) fitObjs();
     if (rows.length) { var lb = 0; try { lb = +localStorage.getItem('mm-lastbackup') || 0; } catch (e) {} if (Date.now() - lb > 3 * 864e5) setTimeout(function () { toast('Давно не було резервної копії. Меню → Зберегти резервну копію.', 7000); }, 2500); }
-    loadOblasts();
+    loadOblasts(); trimTrash(); saveTrash();
     startCloud();
   }
   window.addEventListener('beforeunload', function () { saveT.forEach(function (_, id) { var o = objs.get(id); if (o) { dbPut('objs', JSON.parse(JSON.stringify(o))); dirty.add(id); } }); persistSets(); });
