@@ -232,6 +232,11 @@ body { font-size: 15px; }
 #chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .bx, .sp { transform: scale(var(--iz, 1)); transition: transform .15s ease-out; }
 .mvh { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.5); cursor: grab; touch-action: none; }
+@keyframes pulseMove { to { stroke-dashoffset: -20; } }
+.pulse { animation: pulseMove .9s linear infinite; filter: drop-shadow(0 0 2px rgba(255,255,255,.9)); }
+.pulse.rev { animation-direction: reverse; }
+.leaflet-container:not(.z-hi) .pulse { display: none; }
+@media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
 </style>
 </head>
 <body>
@@ -529,8 +534,12 @@ body { font-size: 15px; }
       var hit = L.polyline(pts, { color: '#000', weight: 22, opacity: 0, bubblingMouseEvents: false });
       hit.on('click', function (e) { onObjClick(id, e.latlng, false); });
       hit.bindTooltip(lineLabel(o), { permanent: true, direction: 'center', className: 'lbl' });
-      g.addLayer(casing).addLayer(line).addLayer(hit); g.addTo(gObjs);
-      shapes.set(id, { layer: g, casing: casing, line: line, hit: hit });
+      var pulse = null;
+      if (o.signal === 'fwd' || o.signal === 'back') {
+        pulse = L.polyline(pts, { color: o.status === 'fault' ? '#ffd43b' : '#ffffff', weight: Math.max(3, w - 2), opacity: .95, dashArray: '0.1 19.9', lineCap: 'round', interactive: false, className: 'pulse' + (o.signal === 'back' ? ' rev' : '') });
+      }
+      g.addLayer(casing).addLayer(line); if (pulse) g.addLayer(pulse); g.addLayer(hit); g.addTo(gObjs);
+      shapes.set(id, { layer: g, casing: casing, line: line, hit: hit, pulse: pulse });
     }
   }
   /* ---------- абоненти: лінії видно, лише поки вибраний їхній бокс ---------- */
@@ -579,7 +588,7 @@ body { font-size: 15px; }
 
   function setLineGeom(id) {
     var s = shapes.get(id), o = objs.get(id); if (!s || !s.line) return;
-    var pts = o.pts.map(LL); s.casing.setLatLngs(pts); s.line.setLatLngs(pts); s.hit.setLatLngs(pts);
+    var pts = o.pts.map(LL); s.casing.setLatLngs(pts); s.line.setLatLngs(pts); if (s.pulse) s.pulse.setLatLngs(pts); s.hit.setLatLngs(pts);
     s.hit.setTooltipContent(lineLabel(o));
     if (s.pin) s.pin.setLatLng(LL(o.pts[o.pts.length - 1]));
   }
@@ -799,6 +808,7 @@ body { font-size: 15px; }
       h += '<div class="f"><label for="f-cable">Марка кабелю</label><input id="f-cable" data-f="cable" type="text" value="' + esc(o.cable) + '" placeholder="наприклад, ОКЛ-24"></div>';
       h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка (стане жовтим), щоб його видалити.</p>';
       if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
+      h += '<div class="f"><span class="lab">Анімація сигналу</span><div class="status st-built">' + [['off', 'Вимк'], ['fwd', 'Вперед'], ['back', 'Назад']].map(function (x) { return '<button data-act="signal" data-v="' + x[0] + '" aria-pressed="' + ((o.signal || 'off') === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><p class="note">Світлі точки біжать по лінії. «Вперед» — від першої точки лінії до останньої, «Назад» — навпаки. На аварійній лінії точки жовті.</p></div>';
       h += '<div class="f"><span class="lab">Редагування лінії</span><p class="note">Тягніть білі кружечки, щоб змінити форму. Торкніться маленької цятки між ними, щоб додати точку. Тягніть синю кнопку з хрестиком, щоб перемістити всю лінію.</p><div class="row2"><button class="btn" data-act="extend" data-v="end">+ Продовжити з кінця</button><button class="btn" data-act="extend" data-v="start">+ Продовжити з початку</button></div></div>';
     } else {
       h += '<div class="f"><label for="f-type">Тип</label><select id="f-type" data-f="type">' + opts(BOXVIS, BOX_HIDDEN[o.type] ? 'fob' : o.type) + '</select></div>';
@@ -868,6 +878,7 @@ body { font-size: 15px; }
     else if (act === 'lcolor' && o) { o.color = b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'lcolorreset' && o) { delete o.color; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'ports' && o) { o.ports = parseInt(b.dataset.v, 10); if (!o.pons) o.pons = []; while (o.pons.length < 8) o.pons.push(''); draw(sel); var sp = shapes.get(sel); if (sp && sp.marker) sp.marker.dragging.enable(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'signal' && o && o.kind === 'line') { o.signal = b.dataset.v === 'off' ? '' : b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'extend' && o && o.kind === 'line') startExtend(sel, b.dataset.v);
     else if (act === 'copy' && o) copyCoord(o);
     else if (act === 'addphoto') $('#photoIn').click();
