@@ -639,7 +639,9 @@ table.tb tr.sum td { font-weight: 700; }
     }
   }
   /* ---------- абоненти: лінії видно, лише поки вибраний їхній бокс ---------- */
+  var peekBox = null;
   function subVisible(o) {
+    if (peekBox && o.boxId === peekBox) return true;
     if (!sel) return false;
     if (sel === o.id || sel === o.boxId) return true;
     var s = objs.get(sel); return !!(s && s.kind === 'sub' && s.boxId === o.boxId);
@@ -713,7 +715,7 @@ table.tb tr.sum td { font-weight: 700; }
     if (o.kind === 'box') { var s = shapes.get(id); if (s) { s.marker.setIcon(mkIcon(o)); if (!RO) s.marker.dragging.enable(); } }
     redrawSubs(); rebuildHandles(); openPanel();
   }
-  function deselect() { var prev = sel; sel = null; selVtx = null; if (prev) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } } redrawSubs(); rebuildHandles(); closePanel(); }
+  function deselect() { peekBox = null; var prev = sel; sel = null; selVtx = null; if (prev) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } } redrawSubs(); rebuildHandles(); closePanel(); }
   function rebuildHandles() {
     if (RO) { gHandles.clearLayers(); return; }
     gHandles.clearLayers();
@@ -777,10 +779,10 @@ table.tb tr.sum td { font-weight: 700; }
     if (tool === 'select') {
       if (isBox && o && sel !== id) {
         var now = Date.now();
-        if (!(boxTap.id === id && now - boxTap.t < 1600)) { boxTap = { id: id, t: now }; toast((o.name || BOX[o.type]) + ': торкніться ще раз, щоб відкрити', 1400); return; }
+        if (!(boxTap.id === id && now - boxTap.t < 1600)) { boxTap = { id: id, t: now }; peekBox = id; redrawSubs(); toast((o.name || BOX[o.type]) + ': абоненти показані. Торкніться ще раз, щоб відкрити картку', 2200); return; }
         boxTap = { id: null, t: 0 };
       }
-      select(id); return;
+      peekBox = null; select(id); return;
     }
     tapMap(ll, isBox && o ? [o.lng, o.lat] : null);
   }
@@ -788,7 +790,7 @@ table.tb tr.sum td { font-weight: 700; }
   map.on('mousemove', function (e) { if ((tool === 'line' || tool === 'sub') && draft.length) { if (!rubber) rubber = L.polyline([], { color: '#0a7b76', weight: 3, dashArray: '2 8', interactive: false }).addTo(gDraft); rubber.setLatLngs([LL(draft[draft.length - 1]), e.latlng]); } });
 
   function tapMap(ll, snapPt) {
-    if (tool === 'select') { if (sel) deselect(); return; }
+    if (tool === 'select') { if (peekBox) { peekBox = null; redrawSubs(); } if (sel) deselect(); return; }
     if (tool === 'measure') { mpts.push(snapPt || snapBox(ll, 16) || [ll.lng, ll.lat]); drawMeas(); return; }
     if (tool === 'line' || tool === 'sub') { draft.push(snapPt || (tool === 'line' ? snapBox(ll, 16) : null) || [ll.lng, ll.lat]); drawDraft(); return; }
     if (tool === 'box') {
