@@ -496,7 +496,7 @@ body { font-size: 15px; }
   /* ---------- малювання об'єктів ---------- */
   function mkIcon(o) {
     var on = o.id === sel;
-    var z = o.type === 'cabinet' ? 26 : (o.type === 'manhole' || o.type === 'pole') ? 24 : 24;
+    var z = o.type === 'cabinet' ? 26 : (o.type === 'manhole' || o.type === 'pole') ? 28 : 24;
     return L.divIcon({ className: '', html: '<div class="bx st-' + o.status + (on ? ' sel' : '') + '" style="width:' + z + 'px;height:' + z + 'px"><svg viewBox="-14 -14 28 28" width="' + z + '" height="' + z + '">' + sym(o.type, '#fff') + '</svg></div>', iconSize: [z, z], iconAnchor: [z / 2, z / 2] });
   }
   function undraw(id) { var s = shapes.get(id); if (s) { gObjs.removeLayer(s.layer); shapes.delete(id); } }
