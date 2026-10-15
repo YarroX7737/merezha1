@@ -320,8 +320,8 @@ body { font-size: 15px; }
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
 
-  var BOX = { fob: 'Бокс', closure: 'Муфта', cabinet: 'Сервер', manhole: 'Колодязь', pole: 'Опора', node: 'Муфта', splitter: 'Муфта' }; // node/splitter — старі типи, більше не пропонуються
-  var BOX_HIDDEN = { node: 1, splitter: 1 };
+  var BOX = { fob: 'Бокс', closure: 'Бокс', cabinet: 'Сервер', manhole: 'Колодязь', pole: 'Опора', node: 'Бокс', splitter: 'Бокс' }; // closure/node/splitter — старі типи, тепер це теж «Бокс»
+  var BOX_HIDDEN = { closure: 1, node: 1, splitter: 1 };
   var STATUS = { plan: 'Проєкт', built: 'Змонтовано', fault: 'Аварія' };
   var LAYING = { aerial: 'Підвіс на опорах', duct: 'Кабельна каналізація', ground: 'У ґрунті', building: 'По будівлі' };
   var FIBERS = [2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 144];
@@ -332,11 +332,10 @@ body { font-size: 15px; }
   var FOB = 'data:image/webp;base64,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';
   function sym(type, bgc) {
     switch (type) {
-      case 'fob': return '<image href="' + FOB + '" x="-14" y="-14" width="28" height="28"/><circle cx="8" cy="11" r="4.2" style="fill:var(--c);stroke:#fff;stroke-width:1.6"/>';
+      case 'fob': default: return '<image href="' + FOB + '" x="-14" y="-14" width="28" height="28"/><circle cx="8" cy="11" r="4.2" style="fill:var(--c);stroke:#fff;stroke-width:1.6"/>';
       case 'cabinet': return '<image href="' + SRV + '" x="-14" y="-14" width="28" height="28"/><circle cx="9" cy="10" r="4.2" style="fill:var(--c);stroke:#fff;stroke-width:1.6"/>';
       case 'manhole': return '<circle class="sym" r="9" style="fill:' + (bgc || '#fff') + ';stroke:var(--c);stroke-width:3.5"/><circle r="3" style="fill:var(--c)"/>';
       case 'pole': return '<path class="sym" d="M0 -10 L9.5 7 L-9.5 7 Z"/>';
-      default: return '<circle class="sym" r="8"/>';
     }
   }
   function ico(type, status) { return '<svg class="ico st-' + status + '" viewBox="-14 -14 28 28" aria-hidden="true">' + sym(type, 'var(--panel)') + '</svg>'; }
@@ -496,7 +495,7 @@ body { font-size: 15px; }
   /* ---------- малювання об'єктів ---------- */
   function mkIcon(o) {
     var on = o.id === sel;
-    var z = o.type === 'cabinet' ? 34 : o.type === 'fob' ? 32 : 28;
+    var z = o.type === 'cabinet' ? 34 : (o.type === 'manhole' || o.type === 'pole') ? 28 : 32;
     return L.divIcon({ className: '', html: '<div class="bx st-' + o.status + (on ? ' sel' : '') + '" style="width:' + z + 'px;height:' + z + 'px"><svg viewBox="-14 -14 28 28" width="' + z + '" height="' + z + '">' + sym(o.type, '#fff') + '</svg></div>', iconSize: [z, z], iconAnchor: [z / 2, z / 2] });
   }
   function undraw(id) { var s = shapes.get(id); if (s) { gObjs.removeLayer(s.layer); shapes.delete(id); } }
