@@ -177,7 +177,7 @@ body { font-size: 15px; }
 .brand h1 { font-size: 17px; }
 .brand p { font-size: 11px; }
 .search input { font-size: 16px; padding: 11px 14px; border-radius: 12px; }
-#btnMenu { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 9px 12px; }
+#btnMenu, #btnSave { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 9px 12px; }
 .btn { border-radius: 12px; min-height: 40px; }
 .btn.primary { background: linear-gradient(180deg, var(--accent2), var(--accent)); }
 .fab { position: absolute; right: var(--gr); top: 12px; z-index: 1000; display: grid; gap: 8px; justify-items: end; }
@@ -194,7 +194,10 @@ body { font-size: 15px; }
 .seg svg { width: 22px; height: 22px; }
 .chip { padding: 8px 12px; font-size: 13px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
 #draftbar { top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); border-radius: 16px; padding: 8px 8px 8px 14px; }
-#draftbar .btn { min-height: 44px; padding: 8px 16px; }
+#draftbar .btn { min-height: 44px; padding: 8px 12px; }
+#draftbar { flex-wrap: wrap; justify-content: center; width: calc(100% - 24px); max-width: 420px; white-space: normal; }
+#draftbar .btn { flex: 1 1 0; padding: 8px 6px; }
+#draftbar span { flex: 1 1 100%; text-align: center; }
 #panel { border-radius: 20px 0 0 20px; }
 .grab { display: none; width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 8px auto 0; flex: none; }
 .f input, .f select, .f textarea { font-size: 16px; padding: 11px 12px; border-radius: 10px; }
@@ -211,8 +214,8 @@ body { font-size: 15px; }
 #login input { font-size: 16px; padding: 12px; }
 #login .btn { min-height: 46px; }
 @media (max-width: 720px) {
-  #btnMenu span { display: none; }
-  #btnMenu { padding: 9px 11px; }
+  #btnMenu span, #btnSave span { display: none; }
+  #btnMenu, #btnSave { padding: 9px 11px; }
   .bar { flex-wrap: wrap; }
   .brand { flex: 1 1 0; }
   .search { order: 3; }
@@ -233,6 +236,7 @@ body { font-size: 15px; }
       <input id="q" type="search" placeholder="Адреса: вулиця, будинок, село, місто" autocomplete="off" aria-label="Пошук адреси">
       <div id="results" hidden></div>
     </div>
+    <button class="btn" id="btnSave" aria-label="Зберегти"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 4h11l3 3v13H5z"/><path d="M8 4v5h7V4M8 20v-6h8v6"/></svg><span>Зберегти</span></button>
     <button class="btn" id="btnMenu" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Меню</span></button>
   </header>
   <div id="banner" hidden></div>
@@ -245,6 +249,7 @@ body { font-size: 15px; }
     <div class="zoom"><button id="zin" aria-label="Збільшити">+</button><button id="zout" aria-label="Зменшити">−</button></div>
     <div id="draftbar" hidden>
       <span id="draftInfo"></span>
+      <button class="btn" id="draftUndo" aria-label="Прибрати останню точку">↩ Назад</button>
       <button class="btn" id="draftCancel">Скасувати</button>
       <button class="btn primary" id="draftDone">Готово</button>
     </div>
@@ -650,7 +655,7 @@ body { font-size: 15px; }
     }
     $('#draftbar').hidden = !draft.length;
     $('#draftInfo').textContent = (tool === 'sub' ? 'Лінія абонента · ' : 'Нова лінія · ') + draft.length + ' ' + plural(draft.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(draft));
-    $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
+    $('#draftUndo').disabled = tool === 'sub' ? draft.length < 2 : !draft.length; $('#draftUndo').style.opacity = $('#draftUndo').disabled ? .5 : 1; $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
   }
   function finishLine() {
     if (draft.length < 2) { toast('Потрібно щонайменше дві точки'); return; }
@@ -663,6 +668,7 @@ body { font-size: 15px; }
     draft = []; drawDraft();
     if (tool === 'sub') { var b = subFrom; setTool('select'); if (b && objs.get(b)) select(b); }
   }
+  $('#draftUndo').onclick = function () { if (tool === 'sub' ? draft.length > 1 : draft.length) { draft.pop(); if (rubber) { gDraft.removeLayer(rubber); rubber = null; } drawDraft(); } };
   $('#draftDone').onclick = finishLine; $('#draftCancel').onclick = cancelDraft;
 
   /* ---------- інструменти ---------- */
@@ -686,6 +692,7 @@ body { font-size: 15px; }
   document.addEventListener('keydown', function (e) {
     var tag = (e.target.tagName || '').toLowerCase();
     if (e.key === 'Escape') { if (!$('#lightbox').hidden) $('#lightbox').hidden = true; else if (draft.length) cancelDraft(); else if (!$('#menu').hidden) $('#menu').hidden = true; else if (sel) deselect(); }
+    else if ((e.key === 'Backspace' || (e.key === 'z' && (e.ctrlKey || e.metaKey))) && draft.length && tag !== 'input' && tag !== 'textarea') { e.preventDefault(); $('#draftUndo').click(); }
     else if (e.key === 'Enter' && draft.length && tag !== 'input' && tag !== 'textarea') finishLine();
     else if (!$('#lightbox').hidden) { if (e.key === 'ArrowLeft') { lbIdx--; lbShow(); } if (e.key === 'ArrowRight') { lbIdx++; lbShow(); } }
   });
@@ -1107,6 +1114,18 @@ body { font-size: 15px; }
     try { var s = await sb.auth.getSession(); if (s.data && s.data.session) { cloudReady = true; await syncAll(); } } catch (e) {}
   }
   window.addEventListener('online', function () { if (sb && !cloudReady) retryCloud(); else if (cloudReady) syncAll(); });
+  $('#btnSave').onclick = async function () {
+    var b = $('#btnSave'); b.disabled = true;
+    try {
+      Array.from(saveT.keys()).forEach(function (id) { queueSave(id, 0); });
+      await new Promise(function (r) { setTimeout(r, 700); });
+      if (sb && cloudReady) {
+        await syncAll(); await new Promise(function (r) { setTimeout(r, 500); });
+        toast(dirty.size || tomb.size ? 'Збережено на пристрої. У хмару відправиться, коли буде зв’язок.' : 'Збережено ✓ Дані є в хмарі.', 3500);
+      } else toast('Збережено на цьому пристрої. Щоб бачити на інших, увійдіть у хмару (Меню).', 4000);
+    } catch (e) { toast('Не вдалося зберегти. Спробуйте ще раз.'); }
+    b.disabled = false;
+  };
   setInterval(function () { if (cloudReady && (dirty.size || tomb.size)) syncAll(); }, 30000);
 
   /* ---------- запуск ---------- */
