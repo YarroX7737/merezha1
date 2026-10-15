@@ -289,6 +289,7 @@ table.tb tr.sum td { font-weight: 700; }
 #toast button { margin-left: 10px; border: 1px solid var(--bg); background: transparent; color: var(--bg); border-radius: 8px; padding: 3px 10px; font-weight: 700; }
 .car { font-size: 11px; margin-left: -2px; opacity: .8; }
 #tools [data-tool="box"] { position: relative; }
+.fcol { width: 44px; height: 38px; padding: 2px; flex: none; border: 1px solid var(--line); border-radius: 8px; background: var(--bg); }
 </style>
 </head>
 <body>
@@ -938,6 +939,7 @@ table.tb tr.sum td { font-weight: 700; }
         '<button class="btn" data-act="lcolorreset" style="justify-self:start">Колір за станом</button></div>';
       h += '<div class="len"><span class="lab">Довжина по трасі</span><b id="pLen">' + fmtLen(lineLen(o.pts)) + '</b></div>';
       h += '<div class="row2"><div class="f"><label for="f-fibers">Волокон</label><select id="f-fibers" data-f="fibers">' + FIBERS.map(function (n) { return '<option value="' + n + '"' + (n === o.fibers ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><div class="f"><label for="f-laying">Прокладка</label><select id="f-laying" data-f="laying">' + opts(LAYING, o.laying) + '</select></div></div>';
+      h += fibersBlock(o);
       h += '<div class="f"><label for="f-cable">Марка кабелю</label><input id="f-cable" data-f="cable" type="text" value="' + esc(o.cable) + '" placeholder="наприклад, ОКЛ-24"></div>';
       h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка (стане жовтим), щоб його видалити.</p>';
       if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
@@ -970,7 +972,13 @@ table.tb tr.sum td { font-weight: 700; }
   }
   /* ---------- схема волокон у боксі ---------- */
   var FCOL = [['синій', '#2f6fdb'], ['помаранчевий', '#f28c28'], ['зелений', '#2fa84f'], ['коричневий', '#8b5a2b'], ['сірий', '#9aa5ab'], ['білий', '#f4f4f4'], ['червоний', '#e04646'], ['чорний', '#222'], ['жовтий', '#f2d024'], ['фіолетовий', '#8e55c7'], ['рожевий', '#f08fb5'], ['блакитний', '#4fc3e8']];
-  function fibLab(n) { var c = FCOL[(n - 1) % 12], m = Math.ceil(n / 12); return '<i class="fib" style="background:' + c[1] + '"></i>№' + n + ' ' + c[0] + (n > 12 ? ' (мод. ' + m + ')' : ''); }
+  function fibInfo(l, n) { var f = l && l.fl && l.fl[n - 1] || {}, c = FCOL[(n - 1) % 12]; return { c: f.c || c[1], t: f.t || '', def: c[0] }; }
+  function fibLab(n, l) { var i = fibInfo(l, n), m = Math.ceil(n / 12); return '<i class="fib" style="background:' + esc(i.c) + '"></i>№' + n + (i.t ? ' ' + esc(i.t) : ' ' + i.def) + (n > 12 && !i.t ? ' (мод. ' + m + ')' : ''); }
+  function fibersBlock(o) {
+    var n = Math.min(o.fibers || 12, 144), rows = '';
+    for (var i = 1; i <= n; i++) { var f = fibInfo(o, i); rows += '<div class="coord"><input type="color" class="fcol" data-flc="' + i + '" value="' + esc(f.c) + '" aria-label="Колір волокна ' + i + '"><span class="note" style="min-width:26px">№' + i + '</span><input data-fl="' + i + '" type="text" value="' + esc(f.t) + '" placeholder="' + esc(f.def) + ' — підпис" autocomplete="off"></div>'; }
+    return '<details class="f"><summary class="lab" style="cursor:pointer">Волокна: кольори і підписи · ' + n + '</summary><div style="display:grid;gap:6px;margin-top:8px">' + rows + '<button class="btn" data-act="fldef">Скинути кольори до стандартних</button></div></details>';
+  }
   function nearLines(b) {
     var out = [], me = [b.lng, b.lat];
     objs.forEach(function (l) { if (l.kind === 'line' && l.pts.some(function (p) { return dist(p, me) < 25; })) out.push(l); });
@@ -985,7 +993,7 @@ table.tb tr.sum td { font-weight: 700; }
     var tot = 0;
     sp.forEach(function (x, i) {
       var la = objs.get(x.a.l), lb = x.b && x.b.l ? objs.get(x.b.l) : null; tot += parseFloat(String(x.loss).replace(',', '.')) || 0;
-      h += '<div class="spl"><div>' + esc(la ? la.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.a.f) + '<br>⇄ ' + (x.b && x.b.l ? esc(lb ? lb.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.b.f) : '<b>' + esc(x.to || 'інше') + '</b>') + (x.loss !== '' && x.loss != null ? ' · ' + esc(String(x.loss)) + ' дБ' : '') + (x.note ? '<br><span class="note">' + esc(x.note) + '</span>' : '') + '</div><button data-act="spdel" data-i="' + i + '" aria-label="Видалити з’єднання">✕</button></div>';
+      h += '<div class="spl"><div>' + esc(la ? la.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.a.f, la) + '<br>⇄ ' + (x.b && x.b.l ? esc(lb ? lb.name || 'Лінія' : '(лінію видалено)') + ' ' + fibLab(x.b.f, lb) : '<b>' + esc(x.to || 'інше') + '</b>') + (x.loss !== '' && x.loss != null ? ' · ' + esc(String(x.loss)) + ' дБ' : '') + (x.note ? '<br><span class="note">' + esc(x.note) + '</span>' : '') + '</div><button data-act="spdel" data-i="' + i + '" aria-label="Видалити з’єднання">✕</button></div>';
     });
     if (sp.length) h += '<div class="note">Усього зварів: ' + sp.length + ' · сумарні втрати ≈ ' + tot.toFixed(2).replace('.', ',') + ' дБ</div>';
     var lopt = ls.map(function (l) { return '<option value="' + esc(l.id) + '">' + esc(l.name || 'Лінія') + ' (' + l.fibers + ')</option>'; }).join('');
@@ -1030,6 +1038,11 @@ table.tb tr.sum td { font-weight: 700; }
   panel.addEventListener('input', function (e) {
     var o0 = sel && objs.get(sel);
     if (e.target.dataset.pon != null && o0) { var pi = parseInt(e.target.dataset.pon, 10); if (!o0.pons) o0.pons = []; while (o0.pons.length < 8) o0.pons.push(''); o0.pons[pi] = e.target.value; queueSave(sel); return; }
+    if ((e.target.dataset.fl != null || e.target.dataset.flc != null) && o0 && o0.kind === 'line') {
+      var fi = parseInt(e.target.dataset.fl != null ? e.target.dataset.fl : e.target.dataset.flc, 10) - 1; o0.fl = o0.fl || [];
+      while (o0.fl.length <= fi) o0.fl.push(null); var fo = o0.fl[fi] || (o0.fl[fi] = {});
+      if (e.target.dataset.fl != null) fo.t = e.target.value; else fo.c = e.target.value; queueSave(sel); return;
+    }
     var f = e.target.dataset.f, o = sel && objs.get(sel); if (!f || !o) return;
     o[f] = f === 'fibers' ? parseInt(e.target.value, 10) : e.target.value;
     if (f === 'fibers') { lastFibers = o.fibers; draw(sel); rebuildHandles(); }
@@ -1058,6 +1071,7 @@ table.tb tr.sum td { font-weight: 700; }
     else if (act === 'ports' && o) { o.ports = parseInt(b.dataset.v, 10); if (!o.pons) o.pons = []; while (o.pons.length < 8) o.pons.push(''); draw(sel); var sp = shapes.get(sel); if (sp && sp.marker) sp.marker.dragging.enable(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'signal' && o && o.kind === 'line') { o.signal = b.dataset.v === 'off' ? '' : b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'extend' && o && o.kind === 'line') startExtend(sel, b.dataset.v);
+    else if (act === 'fldef' && o) { if (o.fl) o.fl = o.fl.map(function (x) { if (x) delete x.c; return x; }); queueSave(sel, 100); refreshPanel(); var d = panelBody.querySelector('details.f'); if (d) d.open = true; }
     else if (act === 'spadd' && o) addSplice(o);
     else if (act === 'spdel' && o && o.splices) { o.splices.splice(parseInt(b.dataset.i, 10), 1); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'copy' && o) copyCoord(o);
