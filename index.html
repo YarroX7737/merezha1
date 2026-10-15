@@ -226,6 +226,10 @@ body { font-size: 15px; }
   .zoom { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: var(--gr); }
   #menu { top: 56px; }
 }
+#chips { flex-direction: column; flex-wrap: nowrap; align-items: stretch; gap: 2px; width: min(240px, 100%); justify-self: end; padding: 6px; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); border-radius: 18px; box-shadow: var(--shadow); }
+#chips .chip { justify-content: flex-start; gap: 12px; min-height: 46px; padding: 8px 12px; font-size: 15px; border: 0; border-radius: 12px; box-shadow: none; background: transparent; backdrop-filter: none; -webkit-backdrop-filter: none; }
+#chips .chip .ico { width: 36px; height: 28px; }
+#chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 </style>
 </head>
 <body>
@@ -686,16 +690,22 @@ body { font-size: 15px; }
     sub: 'Торкайтесь точок траси до абонента. Остання точка — місце абонента. Потім «Готово».'
   };
   function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
+  var chipsOpen = false;
+  function boxHint() { return 'Торкніться карти, щоб поставити: ' + BOX[boxType] + '. Інший тип: кнопка «Бокс».'; }
   function setTool(t) {
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
     tool = t;
     document.querySelectorAll('#tools [data-tool]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tool === t)); });
-    $('#hint').textContent = HINTS[t]; $('#chips').hidden = t !== 'box';
+    $('#hint').textContent = t === 'box' ? boxHint() : HINTS[t]; if (t !== 'box') chipsOpen = false; $('#chips').hidden = !(t === 'box' && chipsOpen);
     $('#map').classList.toggle('draw', t !== 'select');
     if (t !== 'select' && sel) deselect();
   }
-  $('#tools').addEventListener('click', function (e) { var b = e.target.closest('[data-tool]'); if (b) setTool(b.dataset.tool); });
-  $('#chips').addEventListener('click', function (e) { var b = e.target.closest('[data-type]'); if (b) { boxType = b.dataset.type; buildChips(); } });
+  $('#tools').addEventListener('click', function (e) {
+    var b = e.target.closest('[data-tool]'); if (!b) return;
+    if (b.dataset.tool === 'box') { var was = tool === 'box'; chipsOpen = was ? !chipsOpen : true; setTool('box'); }
+    else setTool(b.dataset.tool);
+  });
+  $('#chips').addEventListener('click', function (e) { var b = e.target.closest('[data-type]'); if (b) { boxType = b.dataset.type; buildChips(); chipsOpen = false; $('#chips').hidden = true; $('#hint').textContent = boxHint(); } });
   document.addEventListener('keydown', function (e) {
     var tag = (e.target.tagName || '').toLowerCase();
     if (e.key === 'Escape') { if (!$('#lightbox').hidden) $('#lightbox').hidden = true; else if (draft.length) cancelDraft(); else if (!$('#menu').hidden) $('#menu').hidden = true; else if (sel) deselect(); }
