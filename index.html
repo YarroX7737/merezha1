@@ -169,6 +169,60 @@ button { cursor: pointer; }
   .zoom { top: auto; bottom: 170px; }
   .legend { display: none; }
 }
+
+/* ===== v2: оновлений вигляд і зручність на телефоні ===== */
+:root { --r: 14px; --accent2: #0a9a93; --glass: color-mix(in srgb, var(--panel) 88%, transparent); }
+body { font-size: 15px; }
+.bar { gap: 8px 10px; padding: 8px var(--gr) 8px var(--gl); background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); }
+.brand h1 { font-size: 17px; }
+.brand p { font-size: 11px; }
+.search input { font-size: 16px; padding: 11px 14px; border-radius: 12px; }
+#btnMenu { display: inline-flex; align-items: center; gap: 6px; border-radius: 12px; padding: 9px 12px; }
+.btn { border-radius: 12px; min-height: 40px; }
+.btn.primary { background: linear-gradient(180deg, var(--accent2), var(--accent)); }
+.fab { position: absolute; right: var(--gr); top: 12px; z-index: 1000; display: grid; gap: 8px; justify-items: end; }
+.fab .btn { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); box-shadow: var(--shadow); font-size: 13px; padding: 8px 14px; border-radius: 999px; min-height: 38px; }
+.zoom { top: 108px; border-radius: 14px; background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); }
+.zoom button { width: 44px; height: 44px; font-size: 22px; }
+#app.panel-open .fab { right: calc(var(--panel-w) + 12px); }
+#dock { bottom: 0; padding: 0 var(--gr) calc(12px + env(safe-area-inset-bottom, 0px)) var(--gl); }
+.hint { background: var(--glass); backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px); border-radius: 12px; font-size: 12.5px; padding: 7px 12px; }
+.seg { width: min(100%, 440px); display: grid; grid-template-columns: repeat(3, 1fr); border-radius: 18px; padding: 5px; gap: 4px; background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border: 1px solid var(--line); box-shadow: var(--shadow); }
+.seg button { flex-direction: column; justify-content: center; gap: 3px; padding: 9px 6px; border-radius: 14px; font-size: 12.5px; min-height: 56px; }
+.seg button + button { border-left: 0; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
+.seg svg { width: 22px; height: 22px; }
+.chip { padding: 8px 12px; font-size: 13px; background: var(--glass); backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px); }
+#draftbar { top: auto; bottom: calc(96px + env(safe-area-inset-bottom, 0px)); border-radius: 16px; padding: 8px 8px 8px 14px; }
+#draftbar .btn { min-height: 44px; padding: 8px 16px; }
+#panel { border-radius: 20px 0 0 20px; }
+.grab { display: none; width: 44px; height: 5px; border-radius: 3px; background: var(--line); margin: 8px auto 0; flex: none; }
+.f input, .f select, .f textarea { font-size: 16px; padding: 11px 12px; border-radius: 10px; }
+.f textarea { min-height: 96px; }
+.status button { padding: 11px 4px; font-size: 13px; }
+.x { width: 44px; height: 44px; }
+.sw { width: 38px; height: 38px; }
+.thumb { border-radius: 12px; }
+#menu { border-radius: 16px; padding: 12px; }
+#menu .btn { padding: 12px 14px; }
+#menu input { font-size: 16px; padding: 10px 12px; }
+#toast { bottom: calc(110px + env(safe-area-inset-bottom, 0px)); border-radius: 12px; }
+#login .card { border-radius: 18px; padding: 22px; }
+#login input { font-size: 16px; padding: 12px; }
+#login .btn { min-height: 46px; }
+@media (max-width: 720px) {
+  #btnMenu span { display: none; }
+  #btnMenu { padding: 9px 11px; }
+  .bar { flex-wrap: wrap; }
+  .brand { flex: 1 1 0; }
+  .search { order: 3; }
+  #panel { top: auto; max-height: 72%; border-radius: 22px 22px 0 0; border-top: 1px solid var(--line); background: var(--panel); }
+  .grab { display: block; }
+  #panelBody { padding: 8px var(--gr) 24px var(--gl); gap: 16px; }
+  #app.panel-open .fab { display: none; }
+  .zoom { top: auto; bottom: calc(150px + env(safe-area-inset-bottom, 0px)); right: var(--gr); }
+  #menu { top: 56px; }
+}
 </style>
 </head>
 <body>
@@ -179,13 +233,15 @@ button { cursor: pointer; }
       <input id="q" type="search" placeholder="Адреса: вулиця, будинок, село, місто" autocomplete="off" aria-label="Пошук адреси">
       <div id="results" hidden></div>
     </div>
-    <button class="btn" id="btnLayer">Супутник</button>
-    <button class="btn" id="btnPower" aria-pressed="false" title="Лінії електропередач і опори з OpenStreetMap">Електромережі</button>
-    <button class="btn" id="btnMenu" aria-expanded="false">Меню</button>
+    <button class="btn" id="btnMenu" aria-expanded="false" aria-label="Меню"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h16"/></svg><span>Меню</span></button>
   </header>
   <div id="banner" hidden></div>
   <main id="stage">
     <div id="map"></div>
+    <div class="fab">
+      <button class="btn" id="btnLayer">Супутник</button>
+      <button class="btn" id="btnPower" aria-pressed="false" title="Лінії електропередач і опори з OpenStreetMap">Електромережі</button>
+    </div>
     <div class="zoom"><button id="zin" aria-label="Збільшити">+</button><button id="zout" aria-label="Зменшити">−</button></div>
     <div id="draftbar" hidden>
       <span id="draftInfo"></span>
@@ -213,7 +269,7 @@ button { cursor: pointer; }
       <button class="btn" id="mExport">Експорт у GeoJSON</button>
       <button class="btn" id="mImport">Імпорт GeoJSON…</button>
     </div>
-    <aside id="panel" hidden><div id="panelBody"></div></aside>
+    <aside id="panel" hidden><div class="grab" aria-hidden="true"></div><div id="panelBody"></div></aside>
   </main>
 </div>
 <div id="lightbox" hidden>
@@ -330,9 +386,13 @@ button { cursor: pointer; }
   L.control.scale({ metric: true, imperial: false, position: 'topleft' }).addTo(map);
   var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
   var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Esri, Maxar, Earthstar Geographics' });
-  var useSat = false; try { useSat = localStorage.getItem('mm-sat') === '1'; } catch (e) {}
-  function applyLayer() { map.removeLayer(osm); map.removeLayer(sat); (useSat ? sat : osm).addTo(map); $('#btnLayer').textContent = useSat ? 'Схема' : 'Супутник'; }
-  $('#btnLayer').onclick = function () { useSat = !useSat; try { localStorage.setItem('mm-sat', useSat ? '1' : '0'); } catch (e) {} applyLayer(); };
+  var VISKEY = '36ec859d785b149b16bfe2e42c75a61f';
+  var vis = L.tileLayer('https://tms{s}.visicom.ua/2.0.0/planet3/base_uk/{z}/{x}/{y}.png?key=' + VISKEY, { subdomains: '123', tms: true, maxZoom: 19, attribution: '&copy; <a href="https://api.visicom.ua/uk/docs/copyright">Візіком</a>' });
+  var BASES = [['osm', osm, 'Схема'], ['vis', vis, 'Visicom'], ['sat', sat, 'Супутник']];
+  var baseId = 'osm'; try { var sv = localStorage.getItem('mm-base'); if (sv) baseId = sv; else if (localStorage.getItem('mm-sat') === '1') baseId = 'sat'; } catch (e) {}
+  function baseIdx() { for (var i = 0; i < BASES.length; i++) if (BASES[i][0] === baseId) return i; return 0; }
+  function applyLayer() { BASES.forEach(function (b) { map.removeLayer(b[1]); }); var i = baseIdx(); BASES[i][1].addTo(map); BASES[i][1].bringToBack(); $('#btnLayer').textContent = 'Фон: ' + BASES[i][2]; }
+  $('#btnLayer').onclick = function () { baseId = BASES[(baseIdx() + 1) % BASES.length][0]; try { localStorage.setItem('mm-base', baseId); } catch (e) {} applyLayer(); };
   applyLayer();
   var gObjs = L.layerGroup().addTo(map), gHandles = L.layerGroup().addTo(map), gDraft = L.layerGroup().addTo(map), gFound = L.layerGroup().addTo(map), gObl = L.layerGroup().addTo(map);
   var rubber = null, subHandle = null, subFrom = null;
