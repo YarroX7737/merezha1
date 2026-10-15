@@ -978,8 +978,8 @@ table.tb tr.sum td { font-weight: 700; }
   function fibLab(n, l) { var i = fibInfo(l, n), m = Math.ceil(n / 12); return '<i class="fib" style="background:' + esc(i.c) + '"></i>№' + n + (i.t ? ' ' + esc(i.t) : ' ' + i.def) + (n > 12 && !i.t ? ' (мод. ' + m + ')' : ''); }
   function fibersBlock(o) {
     var n = Math.min(o.fibers || 12, 144), rows = '';
-    for (var i = 1; i <= n; i++) { var f = fibInfo(o, i); rows += '<div class="coord"><input type="color" class="fcol" data-flc="' + i + '" value="' + esc(f.c) + '" aria-label="Колір волокна ' + i + '"><span class="note" style="min-width:26px">№' + i + '</span><input data-fl="' + i + '" type="text" value="' + esc(f.t) + '" placeholder="' + esc(f.def) + ' — підпис" autocomplete="off"></div>'; }
-    return '<details class="f"><summary class="lab" style="cursor:pointer">Волокна: кольори і підписи · ' + n + '</summary><div style="display:grid;gap:6px;margin-top:8px">' + rows + '<button class="btn" data-act="fldef">Скинути кольори до стандартних</button></div></details>';
+    for (var i = 1; i <= n; i++) { var f = fibInfo(o, i); rows += '<div class="coord"><input type="color" class="fcol" data-flc="' + i + '" value="' + esc(f.c) + '" aria-label="Колір волокна ' + i + '"><span class="note" style="min-width:74px;color:var(--ink)">' + i + ' волокно</span><input data-fl="' + i + '" type="text" value="' + esc(f.t) + '" placeholder="Підпис: куди, 1 око…" autocomplete="off"></div>'; }
+    return '<details class="f" open><summary class="lab" style="cursor:pointer">Волокна лінії · ' + n + ' (колір і підпис кожного)</summary><div style="display:grid;gap:6px;margin-top:8px">' + rows + '<button class="btn" data-act="fldef">Скинути кольори до стандартних</button></div></details>';
   }
   function uplinkBlock(o) {
     var opts = '<option value="">— не вказано —</option>', down = [];
