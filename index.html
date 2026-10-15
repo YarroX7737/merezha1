@@ -821,6 +821,21 @@ button { cursor: pointer; }
   /* ---------- шар «Електромережі» (OpenStreetMap через Overpass) ---------- */
   var gPower = L.featureGroup().addTo(map), powerOn = false, powerBox = null, powerT = 0, powerCtl = null;
   function setPowerBtn() { var b = $('#btnPower'); b.setAttribute('aria-pressed', String(powerOn)); b.style.background = powerOn ? 'var(--accent)' : ''; b.style.color = powerOn ? 'var(--accent-ink)' : ''; }
+  var OVERPASS = ['https://overpass-api.de/api/interpreter', 'https://overpass.kumi.systems/api/interpreter', 'https://overpass.private.coffee/api/interpreter'];
+  async function overpass(q, signal) {
+    var err = '';
+    for (var i = 0; i < OVERPASS.length; i++) {
+      var c = new AbortController(), t = setTimeout(function () { c.abort(); }, 20000), onAbort = function () { c.abort(); };
+      signal.addEventListener('abort', onAbort);
+      try {
+        var r = await fetch(OVERPASS[i] + '?data=' + encodeURIComponent(q), { signal: c.signal });
+        if (r.ok) return await r.json();
+        err = 'сервер відповів ' + r.status;
+      } catch (e) { if (signal.aborted) throw e; err = (e && e.name === 'AbortError') ? 'сервер не відповідає' : 'немає зв’язку з сервером'; }
+      finally { clearTimeout(t); signal.removeEventListener('abort', onAbort); }
+    }
+    throw new Error(err);
+  }
   async function loadPower() {
     if (!powerOn) return;
     if (map.getZoom() < 14) { gPower.clearLayers(); powerBox = null; toast('Наблизьте карту, щоб побачити лінії й опори', 2500); return; }
@@ -829,9 +844,7 @@ button { cursor: pointer; }
     var bb = view.pad(0.25), q = '[out:json][timeout:25];(way["power"~"^(line|minor_line)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + ');node["power"~"^(pole|tower)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + '););out geom 6000;';
     if (powerCtl) powerCtl.abort(); powerCtl = new AbortController();
     try {
-      var r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: powerCtl.signal });
-      if (!r.ok) throw new Error('http ' + r.status);
-      var j = await r.json(); if (!powerOn) return;
+      var j = await overpass(q, powerCtl.signal); if (!powerOn) return;
       gPower.clearLayers(); var poles = 0, lines = 0;
       (j.elements || []).forEach(function (el) {
         var t = el.tags || {};
@@ -844,7 +857,7 @@ button { cursor: pointer; }
       });
       gPower.bringToBack(); powerBox = bb;
       toast('Електромережі OSM: ліній ' + lines + ', опор ' + poles + (lines + poles === 0 ? '. У цьому місці OSM даних немає.' : ''), 3500);
-    } catch (e) { if (e && e.name === 'AbortError') return; toast('Не вдалося завантажити електромережі. Спробуйте ще раз.', 3500); }
+    } catch (e) { if (e && e.name === 'AbortError') return; toast('Електромережі не завантажились: ' + ((e && e.message) || 'невідома помилка') + '. Пересуньте карту, щоб спробувати ще раз.', 5000); }
   }
   function setPower(on) {
     powerOn = on; try { localStorage.setItem('mm-power', on ? '1' : '0'); } catch (e) {}
