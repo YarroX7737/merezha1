@@ -1,0 +1,871 @@
+<!doctype html>
+<html lang="uk">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Мапа магістралей</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Onest:wght@400;500;600;700&display=swap">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+:root {
+  color-scheme: light dark;
+  --bg: #eef2f2; --panel: #ffffff; --ink: #14212b; --muted: #5b6b76; --line: #d3dcdf;
+  --accent: #0a7b76; --accent-ink: #ffffff; --bad: #c43a31;
+  --plan: #7048e8; --built: #1c7ed6; --fault: #e03131;
+  --shadow: 0 1px 2px rgba(20,33,43,.14), 0 8px 24px rgba(20,33,43,.14);
+  --font: 'Onest', system-ui, -apple-system, 'Segoe UI', sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, Menlo, monospace;
+  --gl: max(16px, env(safe-area-inset-left, 0px));
+  --gr: max(16px, env(safe-area-inset-right, 0px));
+  --panel-w: 360px;
+}
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #0e1a20; --panel: #16252d; --ink: #e5eef1; --muted: #90a4ae; --line: #29404b; --accent: #3cc3ba; --accent-ink: #06201e; --bad: #f2706a; --shadow: 0 1px 2px rgba(0,0,0,.5), 0 8px 24px rgba(0,0,0,.5); }
+}
+html, body { height: 100%; margin: 0; }
+body { background: var(--bg); color: var(--ink); font: 14px/1.4 var(--font); overflow: hidden; -webkit-tap-highlight-color: transparent; }
+* { box-sizing: border-box; }
+button, input, select, textarea { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+#app { height: 100%; display: flex; flex-direction: column; padding-top: env(safe-area-inset-top, 0px); }
+.bar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; padding: 10px var(--gr) 10px var(--gl); background: var(--panel); border-bottom: 1px solid var(--line); position: relative; z-index: 1300; }
+.brand { min-width: 0; flex: 1 1 auto; }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 700; letter-spacing: -.01em; }
+.brand p { margin: 0; font-family: var(--mono); font-size: 11.5px; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.search { position: relative; order: 3; flex: 1 1 100%; }
+.search input { width: 100%; border: 1px solid var(--line); background: var(--bg); border-radius: 10px; padding: 9px 12px; }
+.search input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+#results { position: absolute; top: calc(100% + 6px); left: 0; right: 0; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; box-shadow: var(--shadow); overflow: hidden; max-height: 50vh; overflow-y: auto; }
+#results button { display: block; width: 100%; text-align: left; border: 0; border-top: 1px solid var(--line); background: transparent; padding: 10px 12px; font-size: 13px; }
+#results button:first-child { border-top: 0; }
+#results button:hover { background: var(--bg); }
+#results p { margin: 0; padding: 10px 12px; color: var(--muted); font-size: 13px; }
+@media (min-width: 760px) { .search { order: 0; flex: 0 1 420px; } .brand { flex: 0 0 auto; margin-right: 8px; } .bar { flex-wrap: nowrap; } .spacer { flex: 1; } }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 8px; padding: 8px 12px; font-weight: 500; text-decoration: none; display: inline-block; text-align: center; }
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); font-weight: 600; }
+.btn.danger { color: var(--bad); border-color: var(--bad); background: transparent; }
+.btn.danger.armed { background: var(--bad); color: #fff; }
+.btn.block { display: block; width: 100%; }
+
+#stage { position: relative; flex: 1; min-height: 0; overflow: hidden; }
+#map { position: absolute; inset: 0; background: #e8ecec; }
+#map.draw { cursor: crosshair; }
+.leaflet-container { font-family: var(--font); }
+.leaflet-top.leaflet-left { top: 8px; }
+.leaflet-control-scale-line { background: rgba(255,255,255,.85); }
+.bx { width: 28px; height: 28px; position: relative; }
+.bx svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.bx.sel::after { content: ""; position: absolute; inset: -5px; border-radius: 50%; border: 2px dashed #111; background: rgba(255,255,255,.35); }
+.sym { fill: var(--c); stroke: #fff; stroke-width: 2; }
+.st-plan { --c: var(--plan); } .st-built { --c: var(--built); } .st-fault { --c: var(--fault); }
+.vt { width: 18px; height: 18px; border-radius: 50%; background: #fff; border: 3px solid #111; }
+.vt.on { background: #ffd43b; }
+.md { width: 12px; height: 12px; border-radius: 50%; background: var(--accent); border: 2px solid #fff; opacity: .9; }
+.lbl.leaflet-tooltip { background: transparent; border: 0; box-shadow: none; color: #111; font: 500 11.5px var(--font); text-shadow: 0 0 3px #fff, 0 0 3px #fff, 0 0 3px #fff, 0 0 4px #fff; padding: 0; white-space: nowrap; }
+.lbl.leaflet-tooltip::before { display: none; }
+.z-low .lbl { display: none; }
+.obl-label { font: 700 12px var(--font); letter-spacing: .12em; color: #0a5f5b; text-shadow: 0 0 4px #fff, 0 0 4px #fff, 0 0 4px #fff; white-space: nowrap; text-align: center; }
+.z-hi .obl-label { display: none; }
+.found { width: 22px; height: 22px; border-radius: 50%; background: rgba(224,49,49,.25); border: 3px solid #e03131; }
+
+.legend { position: absolute; left: var(--gl); top: 52px; z-index: 1000; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; box-shadow: var(--shadow); display: flex; gap: 12px; flex-wrap: wrap; font-size: 11.5px; pointer-events: none; }
+.legend span { display: inline-flex; align-items: center; gap: 5px; }
+.legend svg { width: 20px; height: 8px; }
+.zoom { position: absolute; right: var(--gr); top: 12px; z-index: 1000; display: grid; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; box-shadow: var(--shadow); background: var(--panel); }
+.zoom button { width: 40px; height: 40px; border: 0; background: transparent; font-size: 20px; line-height: 1; }
+.zoom button + button { border-top: 1px solid var(--line); }
+
+#dock { position: absolute; left: 0; right: 0; bottom: 18px; padding: 0 var(--gr) 12px var(--gl); display: grid; gap: 8px; justify-items: center; pointer-events: none; z-index: 1000; }
+#dock > * { pointer-events: auto; }
+.hint { background: var(--panel); border: 1px solid var(--line); border-radius: 8px; padding: 6px 10px; font-size: 12.5px; color: var(--muted); max-width: 520px; text-align: center; box-shadow: var(--shadow); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; max-width: 560px; }
+.chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border: 1px solid var(--line); background: var(--panel); border-radius: 999px; font-size: 12.5px; box-shadow: var(--shadow); }
+.chip[aria-pressed="true"] { border-color: var(--accent); background: var(--accent); color: var(--accent-ink); }
+.chip .ico { width: 18px; height: 18px; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--panel); box-shadow: var(--shadow); }
+.seg button { display: inline-flex; align-items: center; gap: 8px; border: 0; background: transparent; padding: 11px 16px; font-weight: 600; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+.seg svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+
+#draftbar { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); z-index: 1100; display: flex; align-items: center; gap: 10px; background: var(--panel); border: 1px solid var(--accent); border-radius: 12px; padding: 8px 8px 8px 14px; box-shadow: var(--shadow); font-size: 13px; white-space: nowrap; }
+#draftbar span { font-family: var(--mono); font-size: 12px; }
+
+#panel { position: absolute; top: 0; right: 0; bottom: 0; width: var(--panel-w); z-index: 1200; background: var(--panel); border-left: 1px solid var(--line); box-shadow: var(--shadow); display: flex; flex-direction: column; }
+#panelBody { overflow-y: auto; padding: 14px var(--gr) 24px 16px; display: grid; gap: 14px; align-content: start; flex: 1; }
+.ph-head { display: flex; align-items: center; gap: 10px; }
+.ph-head .ico { width: 34px; height: 34px; flex: none; background: var(--bg); border-radius: 10px; padding: 5px; }
+.ph-title { min-width: 0; flex: 1; display: grid; }
+.ph-title strong { font-size: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.eyebrow { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+.x { border: 0; background: transparent; width: 36px; height: 36px; border-radius: 8px; display: grid; place-items: center; }
+.x:hover { background: var(--bg); }
+.x svg { width: 18px; height: 18px; stroke: currentColor; stroke-width: 2; fill: none; stroke-linecap: round; }
+.f { display: grid; gap: 5px; min-width: 0; }
+.f > label, .f > .lab { font-size: 12px; font-weight: 600; color: var(--muted); }
+.row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.f input, .f select, .f textarea { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 9px 10px; }
+.f textarea { min-height: 84px; resize: vertical; }
+.f input:focus, .f select:focus, .f textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
+.status { display: grid; grid-template-columns: repeat(3, 1fr); border: 1px solid var(--line); border-radius: 8px; overflow: hidden; }
+.status button { border: 0; background: transparent; padding: 8px 4px; font-size: 12.5px; font-weight: 500; }
+.status button + button { border-left: 1px solid var(--line); }
+.status button[aria-pressed="true"] { background: var(--c); color: #fff; }
+.addsub { width: 26px; height: 26px; border-radius: 50%; background: #0ca678; color: #fff; font: 700 18px/22px var(--font); text-align: center; border: 2px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,.45); cursor: grab; touch-action: none; }
+.sp svg { display: block; filter: drop-shadow(0 1px 2px rgba(0,0,0,.4)); }
+.subst .st-built { --c: #0ca678; }
+.sublist { text-align: left; }
+.sublist span { color: var(--muted); font-weight: 400; }
+.swatches { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.sw { width: 32px; height: 32px; border-radius: 50%; border: 2px solid var(--panel); box-shadow: 0 0 0 1px var(--line); padding: 0; }
+.sw[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--ink); }
+.sw.custom { position: relative; overflow: hidden; background: conic-gradient(#e03131, #f08c00, #2f9e44, #1c7ed6, #7048e8, #e03131); display: block; }
+.sw.custom input { position: absolute; inset: -6px; width: 44px; height: 44px; opacity: 0; cursor: pointer; border: 0; padding: 0; }
+.coord { display: flex; gap: 8px; align-items: center; }
+.coord code { flex: 1; font-family: var(--mono); font-size: 12px; background: var(--bg); border: 1px solid var(--line); border-radius: 8px; padding: 8px 10px; overflow-x: auto; white-space: nowrap; }
+.coord input { flex: 1; }
+.len { display: flex; align-items: baseline; justify-content: space-between; background: var(--bg); border-radius: 10px; padding: 10px 12px; }
+.len b { font-family: var(--mono); font-size: 18px; font-weight: 500; }
+.photos { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+.thumb { aspect-ratio: 1; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; padding: 0; background: var(--bg); display: grid; place-items: center; font-size: 12px; color: var(--muted); }
+.thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.thumb.add { border-style: dashed; font-weight: 600; color: var(--accent); }
+.note { font-size: 12px; color: var(--muted); margin: 0; }
+
+#menu { position: absolute; top: 8px; right: var(--gr); width: min(320px, calc(100% - var(--gl) - var(--gr))); background: var(--panel); border: 1px solid var(--line); border-radius: 12px; box-shadow: var(--shadow); padding: 10px; display: grid; gap: 8px; z-index: 1250; }
+#menu .btn { text-align: left; }
+#menu .goto { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+#menu input { border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px 10px; min-width: 0; font-family: var(--mono); font-size: 12.5px; }
+#menu hr { border: 0; border-top: 1px solid var(--line); margin: 2px 0; width: 100%; }
+
+#lightbox { position: fixed; inset: 0; background: rgba(5,10,14,.92); z-index: 5000; display: grid; grid-template-rows: auto 1fr; padding-top: env(safe-area-inset-top, 0px); padding-bottom: env(safe-area-inset-bottom, 0px); }
+#lightbox .lb-top { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 10px var(--gr) 10px var(--gl); color: #fff; }
+#lightbox .lb-top .btn { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.25); }
+#lightbox .lb-img { display: grid; place-items: center; min-height: 0; padding: 0 var(--gr) 16px var(--gl); }
+#lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+#toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 14px; font-size: 13px; box-shadow: var(--shadow); z-index: 6000; max-width: calc(100% - 32px); text-align: center; }
+#banner { background: var(--bad); color: #fff; padding: 6px var(--gr) 6px var(--gl); font-size: 12.5px; }
+
+#app.panel-open .zoom { right: calc(var(--panel-w) + 12px); }
+#app.panel-open #dock { right: var(--panel-w); }
+#app.panel-open #menu { right: calc(var(--panel-w) + 12px); }
+@media (max-width: 720px) {
+  #panel { top: auto; left: 0; width: 100%; max-height: 62%; border-left: 0; border-top: 1px solid var(--line); border-radius: 16px 16px 0 0; padding-bottom: env(safe-area-inset-bottom, 0px); }
+  #panelBody { padding: 12px var(--gr) 20px var(--gl); }
+  #app.panel-open #dock, #app.panel-open .zoom { display: none; }
+  #app.panel-open #menu { right: var(--gr); }
+  .zoom { top: auto; bottom: 170px; }
+  .legend { display: none; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <header class="bar">
+    <div class="brand"><h1>Мапа магістралей</h1><p id="stats">Завантаження…</p></div>
+    <div class="search">
+      <input id="q" type="search" placeholder="Адреса: вулиця, будинок, село, місто" autocomplete="off" aria-label="Пошук адреси">
+      <div id="results" hidden></div>
+    </div>
+    <button class="btn" id="btnLayer">Супутник</button>
+    <button class="btn" id="btnPower" aria-pressed="false" title="Лінії електропередач і опори з OpenStreetMap">Електромережі</button>
+    <button class="btn" id="btnMenu" aria-expanded="false">Меню</button>
+  </header>
+  <div id="banner" hidden></div>
+  <main id="stage">
+    <div id="map"></div>
+    <div class="zoom"><button id="zin" aria-label="Збільшити">+</button><button id="zout" aria-label="Зменшити">−</button></div>
+    <div id="draftbar" hidden>
+      <span id="draftInfo"></span>
+      <button class="btn" id="draftCancel">Скасувати</button>
+      <button class="btn primary" id="draftDone">Готово</button>
+    </div>
+    <div id="dock">
+      <div class="hint" id="hint"></div>
+      <div class="chips" id="chips" hidden></div>
+      <div class="seg" id="tools" role="toolbar" aria-label="Інструменти">
+        <button data-tool="select" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg>Вибір</button>
+        <button data-tool="line" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 18l6-9 5 5 5-8"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="6" r="1.5"/></svg>Лінія</button>
+        <button data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M12 9v6M9 12h6"/></svg>Бокс</button>
+      </div>
+    </div>
+    <div id="menu" hidden>
+      <button class="btn" id="mFit">Показати обидві області</button>
+      <button class="btn" id="mFitObj">Показати мої об'єкти</button>
+      <div class="goto"><input id="gotoIn" type="text" inputmode="decimal" placeholder="50.4501, 30.5234" aria-label="Координати"><button class="btn" id="gotoBtn">Перейти</button></div>
+      <hr>
+      <button class="btn" id="mBackup">Зберегти резервну копію (з фото)</button>
+      <button class="btn" id="mRestore">Відновити з копії…</button>
+      <button class="btn" id="mExport">Експорт у GeoJSON</button>
+      <button class="btn" id="mImport">Імпорт GeoJSON…</button>
+    </div>
+    <aside id="panel" hidden><div id="panelBody"></div></aside>
+  </main>
+</div>
+<div id="lightbox" hidden>
+  <div class="lb-top">
+    <span id="lbCount" style="font-family:var(--mono);font-size:12px"></span>
+    <span style="display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end">
+      <button class="btn" id="lbPrev">Назад</button><button class="btn" id="lbNext">Далі</button>
+      <button class="btn" id="lbDel">Видалити</button><button class="btn" id="lbClose">Закрити</button>
+    </span>
+  </div>
+  <div class="lb-img"><img id="lbImg" alt="Фото"></div>
+</div>
+<div id="toast" hidden></div>
+<input type="file" id="photoIn" accept="image/*" multiple hidden>
+<input type="file" id="restoreIn" accept=".json,application/json" hidden>
+<input type="file" id="impIn" accept=".json,.geojson,application/json,application/geo+json" hidden>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (s) { return document.querySelector(s); };
+  var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
+  var sleep = function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); };
+
+  var BOX = { closure: 'Муфта', cabinet: 'Кросова шафа', manhole: 'Колодязь', pole: 'Опора', node: 'Вузол (POP)', splitter: 'Спліттер' };
+  var STATUS = { plan: 'Проєкт', built: 'Змонтовано', fault: 'Аварія' };
+  var LAYING = { aerial: 'Підвіс на опорах', duct: 'Кабельна каналізація', ground: 'У ґрунті', building: 'По будівлі' };
+  var FIBERS = [2, 4, 8, 12, 16, 24, 32, 48, 64, 96, 144];
+  var COL = { plan: '#7048e8', built: '#1c7ed6', fault: '#e03131' };
+  var BOUNDS = [[49.0, 29.0], [52.4, 33.6]]; // Київська + Чернігівська області
+
+  function sym(type, bgc) {
+    switch (type) {
+      case 'cabinet': return '<rect class="sym" x="-8" y="-8" width="16" height="16" rx="3"/>';
+      case 'manhole': return '<circle class="sym" r="9" style="fill:' + (bgc || '#fff') + ';stroke:var(--c);stroke-width:3.5"/><circle r="3" style="fill:var(--c)"/>';
+      case 'pole': return '<path class="sym" d="M0 -10 L9.5 7 L-9.5 7 Z"/>';
+      case 'node': return '<polygon class="sym" points="11,0 5.5,9.5 -5.5,9.5 -11,0 -5.5,-9.5 5.5,-9.5"/>';
+      case 'splitter': return '<path class="sym" d="M0 -11 L11 0 L0 11 L-11 0 Z"/>';
+      default: return '<circle class="sym" r="8"/>';
+    }
+  }
+  function ico(type, status) { return '<svg class="ico st-' + status + '" viewBox="-14 -14 28 28" aria-hidden="true">' + sym(type, 'var(--panel)') + '</svg>'; }
+  function plural(n, f) { var a = n % 10, b = n % 100; if (a === 1 && b !== 11) return f[0]; if (a >= 2 && a <= 4 && (b < 12 || b > 14)) return f[1]; return f[2]; }
+  function dist(a, b) { // a,b = [lng,lat]
+    var R = 6371008.8, r = Math.PI / 180, dLat = (b[1] - a[1]) * r, dLng = (b[0] - a[0]) * r;
+    var s = Math.sin(dLat / 2) * Math.sin(dLat / 2) + Math.cos(a[1] * r) * Math.cos(b[1] * r) * Math.sin(dLng / 2) * Math.sin(dLng / 2);
+    return 2 * R * Math.asin(Math.sqrt(s));
+  }
+  function lineLen(pts) { var t = 0; for (var i = 1; i < pts.length; i++) t += dist(pts[i - 1], pts[i]); return t; }
+  function fmtLen(m) { return m < 1000 ? Math.round(m) + ' м' : (m / 1000).toFixed(2).replace('.', ',') + ' км'; }
+  var LL = function (p) { return [p[1], p[0]]; };
+  var STYLES = { solid: 'Суцільна', dash: 'Пунктир', dot: 'Крапки' };
+  var SWATCHES = ['#1c7ed6', '#e03131', '#2f9e44', '#f08c00', '#7048e8', '#0a7b76', '#e64980', '#111111'];
+  var SUBCOL = { plan: '#7048e8', built: '#0ca678', fault: '#e03131' };
+  var SUBST = { plan: 'Заявка', built: 'Підключено', fault: 'Проблема' };
+  function lineColor(o) { return o.color || (o.kind === 'sub' ? SUBCOL : COL)[o.status]; }
+  function posOf(o) { if (o.kind === 'sub') { var p = o.pts[o.pts.length - 1]; return { lat: p[1], lng: p[0] }; } return { lat: o.lat, lng: o.lng }; }
+  function delLabel(o) { return 'Видалити ' + (o.kind === 'line' ? 'лінію' : o.kind === 'sub' ? 'абонента' : 'бокс'); }
+  function subLabel(o) { return esc(o.name || 'Абонент') + (o.address ? ' · ' + esc(o.address) : ''); }
+  function lineStyle(o) { return o.style || (o.status === 'plan' ? 'dash' : 'solid'); }
+  function dashFor(o) { var s = lineStyle(o); return s === 'dash' ? '12 9' : s === 'dot' ? '1 10' : null; }
+  function uid() { return 'o' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+  var toastT = 0;
+  function toast(msg, ms) { var t = $('#toast'); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(function () { t.hidden = true; }, ms || 2800); }
+
+  /* ---------- IndexedDB (дані і фото лишаються в браузері) ---------- */
+  var memMode = false, dbp = null;
+  function openDb() {
+    return new Promise(function (res, rej) {
+      if (!window.indexedDB) return rej(new Error('no idb'));
+      var r = indexedDB.open('merezha', 1);
+      r.onupgradeneeded = function () { r.result.createObjectStore('objs', { keyPath: 'id' }); r.result.createObjectStore('photos', { keyPath: 'id' }); };
+      r.onsuccess = function () { res(r.result); }; r.onerror = function () { rej(r.error); };
+    });
+  }
+  function tx(store, mode, fn) {
+    return dbp.then(function (d) { return new Promise(function (res, rej) { var t = d.transaction(store, mode), rq = fn(t.objectStore(store)); t.oncomplete = function () { res(rq && rq.result); }; t.onerror = function () { rej(t.error); }; }); });
+  }
+  var dbPut = function (s, v) { return memMode ? Promise.resolve() : tx(s, 'readwrite', function (st) { return st.put(v); }); };
+  var dbDel = function (s, k) { return memMode ? Promise.resolve() : tx(s, 'readwrite', function (st) { return st.delete(k); }); };
+  var dbAll = function (s) { return memMode ? Promise.resolve([]) : tx(s, 'readonly', function (st) { return st.getAll(); }); };
+  var memPhotos = new Map();
+  var dbGetPhoto = function (id) { return memMode ? Promise.resolve(memPhotos.get(id)) : tx('photos', 'readonly', function (st) { return st.get(id); }); };
+  var putPhoto = function (rec) { if (memMode) { memPhotos.set(rec.id, rec); return Promise.resolve(); } return dbPut('photos', rec); };
+
+  /* ---------- state ---------- */
+  var objs = new Map(), shapes = new Map();
+  var sel = null, selVtx = null, tool = 'select', boxType = 'closure', draft = [], lastFibers = 12;
+  var saveT = new Map(), armedDelete = null;
+
+  var map = L.map('map', { zoomControl: false, maxZoom: 19, minZoom: 5, zoomSnap: 0.5 });
+  L.control.scale({ metric: true, imperial: false, position: 'topleft' }).addTo(map);
+  var osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { maxZoom: 19, attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>' });
+  var sat = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 19, attribution: 'Esri, Maxar, Earthstar Geographics' });
+  var useSat = false; try { useSat = localStorage.getItem('mm-sat') === '1'; } catch (e) {}
+  function applyLayer() { map.removeLayer(osm); map.removeLayer(sat); (useSat ? sat : osm).addTo(map); $('#btnLayer').textContent = useSat ? 'Схема' : 'Супутник'; }
+  $('#btnLayer').onclick = function () { useSat = !useSat; try { localStorage.setItem('mm-sat', useSat ? '1' : '0'); } catch (e) {} applyLayer(); };
+  applyLayer();
+  var gObjs = L.layerGroup().addTo(map), gHandles = L.layerGroup().addTo(map), gDraft = L.layerGroup().addTo(map), gFound = L.layerGroup().addTo(map), gObl = L.layerGroup().addTo(map);
+  var rubber = null, subHandle = null, subFrom = null;
+
+  function zoomClasses() { var z = map.getZoom(), c = map.getContainer().classList; c.toggle('z-low', z < 15); c.toggle('z-hi', z >= 12); }
+  map.on('zoomend', zoomClasses); zoomClasses();
+  $('#zin').onclick = function () { map.zoomIn(); }; $('#zout').onclick = function () { map.zoomOut(); };
+
+  var restored = false;
+  try { var sv = JSON.parse(localStorage.getItem('mm-view')); if (sv && isFinite(sv.lat) && isFinite(sv.lng) && isFinite(sv.z)) { map.setView([sv.lat, sv.lng], sv.z); restored = true; } } catch (e) {}
+  if (!restored) map.fitBounds(BOUNDS);
+  map.on('moveend', function () { try { var c = map.getCenter(); localStorage.setItem('mm-view', JSON.stringify({ lat: c.lat, lng: c.lng, z: map.getZoom() })); } catch (e) {} });
+
+  /* ---------- контури областей ---------- */
+  async function loadOblasts() {
+    var names = ['Київська область', 'Чернігівська область'];
+    for (var i = 0; i < names.length; i++) {
+      var n = names[i], gj = null;
+      try { gj = JSON.parse(localStorage.getItem('obl2:' + n)); } catch (e) {}
+      if (!gj) {
+        try {
+          var r = await fetch('https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(n + ', Україна') + '&format=jsonv2&polygon_geojson=1&polygon_threshold=0.004&limit=1&countrycodes=ua&accept-language=uk');
+          var j = await r.json(); gj = j[0] && j[0].geojson;
+          if (gj && (gj.type === 'Polygon' || gj.type === 'MultiPolygon')) { try { localStorage.setItem('obl2:' + n, JSON.stringify(gj)); } catch (e) {} } else gj = null;
+        } catch (e) { gj = null; }
+        await sleep(1200);
+      }
+      if (!gj) continue;
+      var lyr = L.geoJSON(gj, { style: { color: '#0a7b76', weight: 3, dashArray: '10 7', fill: false }, interactive: false }).addTo(gObl);
+      L.marker(lyr.getBounds().getCenter(), { interactive: false, keyboard: false, icon: L.divIcon({ className: 'obl-label', html: n.toUpperCase(), iconSize: [220, 18], iconAnchor: [110, 9] }) }).addTo(gObl);
+    }
+  }
+
+  /* ---------- адреси (Nominatim) ---------- */
+  function fmtAddr(a) {
+    if (!a) return '';
+    var road = a.road || a.pedestrian || a.footway || a.path || a.residential || '';
+    var place = a.city || a.town || a.village || a.hamlet || a.suburb || '';
+    var s = road; if (road && a.house_number) s += ', ' + a.house_number;
+    if (!road && a.house_number) s = a.house_number;
+    if (place) s += (s ? ', ' : '') + place;
+    return s;
+  }
+  async function reverse(lat, lng) {
+    try {
+      var r = await fetch('https://nominatim.openstreetmap.org/reverse?lat=' + lat + '&lon=' + lng + '&format=jsonv2&zoom=19&addressdetails=1&accept-language=uk');
+      var j = await r.json(); return fmtAddr(j.address) || (j.display_name || '').split(',').slice(0, 3).join(',').trim();
+    } catch (e) { return ''; }
+  }
+  async function fillAddress(id, force) {
+    var o = objs.get(id); if (!o || (o.kind !== 'box' && o.kind !== 'sub')) return;
+    if (o.address && !force) return;
+    var pp = posOf(o), a = await reverse(pp.lat, pp.lng);
+    if (!a) { if (force) toast('Адресу не вдалося визначити. Перевірте інтернет.', 3500); return; }
+    o.address = a; queueSave(id); if (o.kind === 'sub') draw(id);
+    if (sel === id) { var inp = $('#f-address'); if (inp && document.activeElement !== inp) inp.value = a; }
+  }
+
+  var qIn = $('#q'), resBox = $('#results');
+  async function search() {
+    var q = qIn.value.trim(); if (q.length < 3) return;
+    resBox.hidden = false; resBox.innerHTML = '<p>Пошук…</p>';
+    var base = 'https://nominatim.openstreetmap.org/search?q=' + encodeURIComponent(q) + '&format=jsonv2&addressdetails=1&limit=7&countrycodes=ua&accept-language=uk';
+    try {
+      var r = await fetch(base + '&viewbox=29.0,52.4,33.6,49.0&bounded=1'), j = await r.json(), wide = false;
+      if (!j.length) { r = await fetch(base); j = await r.json(); wide = true; }
+      if (!j.length) { resBox.innerHTML = '<p>Нічого не знайдено. Спробуйте інакше: «Київ, Хрещатик 22».</p>'; return; }
+      resBox.innerHTML = (wide ? '<p>У двох областях нічого немає, показую по всій Україні.</p>' : '') + j.map(function (x, i) { return '<button data-i="' + i + '">' + esc(fmtAddr(x.address) || x.display_name) + '<br><span style="color:var(--muted);font-size:12px">' + esc(x.display_name.split(',').slice(-4, -1).join(',').trim()) + '</span></button>'; }).join('');
+      resBox._data = j;
+    } catch (e) { resBox.innerHTML = '<p>Пошук недоступний. Перевірте інтернет.</p>'; }
+  }
+  qIn.addEventListener('keydown', function (e) { if (e.key === 'Enter') search(); if (e.key === 'Escape') { resBox.hidden = true; } });
+  resBox.addEventListener('click', function (e) {
+    var b = e.target.closest('button'); if (!b) return;
+    var x = resBox._data[+b.dataset.i], lat = +x.lat, lng = +x.lon;
+    resBox.hidden = true; gFound.clearLayers();
+    L.marker([lat, lng], { icon: L.divIcon({ className: '', html: '<div class="found"></div>', iconSize: [22, 22], iconAnchor: [11, 11] }), interactive: false }).addTo(gFound);
+    map.flyTo([lat, lng], 18, { duration: 0.8 }); toast('Знайдено: ' + (fmtAddr(x.address) || x.display_name.split(',')[0]), 3500);
+  });
+  document.addEventListener('click', function (e) { if (!e.target.closest('.search')) resBox.hidden = true; });
+
+  /* ---------- збереження ---------- */
+  function queueSave(id, delay) {
+    clearTimeout(saveT.get(id));
+    saveT.set(id, setTimeout(function () { saveT.delete(id); var o = objs.get(id); if (o) dbPut('objs', JSON.parse(JSON.stringify(o))).catch(function () { toast('Не вдалося зберегти зміни.'); }); }, delay == null ? 400 : delay));
+  }
+  function removeObj(id) {
+    var o = objs.get(id); if (!o) return;
+    if (o.kind === 'box') Array.from(objs.values()).forEach(function (x) { if (x.kind === 'sub' && x.boxId === id) removeObj(x.id); });
+    objs.delete(id); clearTimeout(saveT.get(id)); undraw(id);
+    dbDel('objs', id); (o.photos || []).forEach(function (p) { dbDel('photos', p.id); });
+  }
+
+  /* ---------- малювання об'єктів ---------- */
+  function mkIcon(o) {
+    var on = o.id === sel;
+    return L.divIcon({ className: '', html: '<div class="bx st-' + o.status + (on ? ' sel' : '') + '"><svg viewBox="-14 -14 28 28" width="28" height="28">' + sym(o.type, '#fff') + '</svg></div>', iconSize: [28, 28], iconAnchor: [14, 14] });
+  }
+  function undraw(id) { var s = shapes.get(id); if (s) { gObjs.removeLayer(s.layer); shapes.delete(id); } }
+  function lineLabel(o) { return esc(o.name || 'Лінія') + ' · ' + (o.fibers || '?') + ' вол · ' + fmtLen(lineLen(o.pts)); }
+  function draw(id) {
+    undraw(id);
+    var o = objs.get(id); if (!o) return;
+    if (o.kind === 'box') {
+      var m = L.marker([o.lat, o.lng], { icon: mkIcon(o), draggable: false, bubblingMouseEvents: false, keyboard: false, riseOnHover: true });
+      m.bindTooltip(esc(o.name || BOX[o.type]), { permanent: true, direction: 'bottom', offset: [0, 12], className: 'lbl' });
+      m.on('click', function (e) { onObjClick(id, e.latlng, true); });
+      m.on('drag', function () { if (subHandle) subHandle.setLatLng(m.getLatLng()); });
+      m.on('dragend', function () { var p = m.getLatLng(); o.lat = p.lat; o.lng = p.lng; queueSave(id, 100); updateStats(); moveSubs(id); rebuildHandles(); var c = $('#pCoord'); if (c) c.textContent = o.lat.toFixed(6) + ', ' + o.lng.toFixed(6); });
+      m.addTo(gObjs); shapes.set(id, { layer: m, marker: m });
+      if (id === sel) m.dragging.enable();
+    } else {
+      if (o.kind === 'sub') { drawSub(id, o); return; }
+      var pts = o.pts.map(LL), w = 3 + Math.min(o.fibers || 12, 144) / 144 * 4, g = L.featureGroup();
+      var casing = L.polyline(pts, { color: '#fff', weight: w + 4, opacity: .9, interactive: false });
+      var line = L.polyline(pts, { color: lineColor(o), weight: w, opacity: 1, dashArray: dashFor(o), lineCap: 'round', interactive: false });
+      var hit = L.polyline(pts, { color: '#000', weight: 22, opacity: 0, bubblingMouseEvents: false });
+      hit.on('click', function (e) { onObjClick(id, e.latlng, false); });
+      hit.bindTooltip(lineLabel(o), { permanent: true, direction: 'center', className: 'lbl' });
+      g.addLayer(casing).addLayer(line).addLayer(hit); g.addTo(gObjs);
+      shapes.set(id, { layer: g, casing: casing, line: line, hit: hit });
+    }
+  }
+  /* ---------- абоненти: лінії видно, лише поки вибраний їхній бокс ---------- */
+  function subVisible(o) {
+    if (!sel) return false;
+    if (sel === o.id || sel === o.boxId) return true;
+    var s = objs.get(sel); return !!(s && s.kind === 'sub' && s.boxId === o.boxId);
+  }
+  function subIcon(o) {
+    return L.divIcon({ className: '', html: '<div class="sp"><svg viewBox="-12 -12 24 24" width="24" height="24"><path d="M-9 1 L0 -9 L9 1 V9 H-9 Z" fill="' + lineColor(o) + '" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg></div>', iconSize: [24, 24], iconAnchor: [12, 12] });
+  }
+  function drawSub(id, o) {
+    if (!subVisible(o)) return;
+    var pts = o.pts.map(LL), g = L.featureGroup();
+    var casing = L.polyline(pts, { color: '#fff', weight: 6, opacity: .9, interactive: false });
+    var line = L.polyline(pts, { color: lineColor(o), weight: 3, dashArray: dashFor(o), lineCap: 'round', interactive: false });
+    var hit = L.polyline(pts, { color: '#000', weight: 18, opacity: 0, bubblingMouseEvents: false });
+    hit.on('click', function (e) { onObjClick(id, e.latlng, false); });
+    var pin = L.marker(pts[pts.length - 1], { icon: subIcon(o), bubblingMouseEvents: false, keyboard: false });
+    pin.bindTooltip(subLabel(o), { permanent: true, direction: 'bottom', offset: [0, 10], className: 'lbl' });
+    pin.on('click', function (e) { onObjClick(id, e.latlng, false); });
+    g.addLayer(casing).addLayer(line).addLayer(hit).addLayer(pin); g.addTo(gObjs);
+    shapes.set(id, { layer: g, casing: casing, line: line, hit: hit, pin: pin });
+  }
+  function redrawSubs() { objs.forEach(function (o, id) { if (o.kind === 'sub') draw(id); }); }
+  function moveSubs(boxId) {
+    var b = objs.get(boxId); if (!b) return;
+    objs.forEach(function (o, id) { if (o.kind === 'sub' && o.boxId === boxId) { o.pts[0] = [b.lng, b.lat]; draw(id); queueSave(id, 100); } });
+  }
+  function createSub(boxId, pts) {
+    var n = 1; objs.forEach(function (x) { if (x.kind === 'sub' && x.boxId === boxId) n++; });
+    var id = uid(), o = { id: id, kind: 'sub', boxId: boxId, name: 'Абонент ' + n, status: 'built', address: '', desc: '', date: '', pts: pts, photos: [] };
+    objs.set(id, o); queueSave(id, 0); updateStats(); select(id); fillAddress(id);
+  }
+  function startSub(boxId) {
+    var b = objs.get(boxId); if (!b) return;
+    subFrom = boxId; setTool('sub'); draft = [[b.lng, b.lat]]; drawDraft();
+  }
+
+  function setLineGeom(id) {
+    var s = shapes.get(id), o = objs.get(id); if (!s || !s.line) return;
+    var pts = o.pts.map(LL); s.casing.setLatLngs(pts); s.line.setLatLngs(pts); s.hit.setLatLngs(pts);
+    s.hit.setTooltipContent(lineLabel(o));
+    if (s.pin) s.pin.setLatLng(LL(o.pts[o.pts.length - 1]));
+  }
+  function updateStats() {
+    var b = 0, l = 0, len = 0, sc = 0;
+    objs.forEach(function (o) { if (o.kind === 'box') b++; else if (o.kind === 'sub') sc++; else { l++; len += lineLen(o.pts || []); } });
+    $('#stats').textContent = b + ' ' + plural(b, ['бокс', 'бокси', 'боксів']) + ' · ' + l + ' ' + plural(l, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(len) + (sc ? ' · ' + sc + ' ' + plural(sc, ['абонент', 'абоненти', 'абонентів']) : '');
+  }
+  function fitObjs() {
+    var pts = [];
+    objs.forEach(function (o) { if (o.kind === 'box') pts.push([o.lat, o.lng]); else o.pts.forEach(function (p) { pts.push(LL(p)); }); });
+    if (!pts.length) { toast('Об’єктів ще немає'); return; }
+    if (pts.length === 1) map.setView(pts[0], 17); else map.fitBounds(L.latLngBounds(pts), { padding: [60, 60], maxZoom: 18 });
+  }
+
+  /* ---------- вибір, ручки редагування ---------- */
+  function snapBox(ll, px) {
+    var best = null, bd = px || 16, p = map.latLngToContainerPoint(ll);
+    objs.forEach(function (o) { if (o.kind !== 'box') return; var d = p.distanceTo(map.latLngToContainerPoint([o.lat, o.lng])); if (d < bd) { bd = d; best = [o.lng, o.lat]; } });
+    return best;
+  }
+  function select(id) {
+    var prev = sel; sel = id; selVtx = null; armedDelete = null;
+    if (prev && prev !== id) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } }
+    var o = objs.get(id); if (!o) return closePanel();
+    if (o.kind === 'box') { var s = shapes.get(id); if (s) { s.marker.setIcon(mkIcon(o)); s.marker.dragging.enable(); } }
+    redrawSubs(); rebuildHandles(); openPanel();
+  }
+  function deselect() { var prev = sel; sel = null; selVtx = null; if (prev) { var po = objs.get(prev); if (po && po.kind === 'box') { var ps = shapes.get(prev); if (ps) { ps.marker.setIcon(mkIcon(po)); ps.marker.dragging.disable(); } } } redrawSubs(); rebuildHandles(); closePanel(); }
+  function rebuildHandles() {
+    gHandles.clearLayers();
+    subHandle = null;
+    var o = sel && objs.get(sel); if (!o) return;
+    var id = sel;
+    if (o.kind === 'box') {
+      var tipOf = function (hm) { return map.containerPointToLatLng(map.latLngToContainerPoint(hm.getLatLng()).add([30, 0])); };
+      var hm = L.marker([o.lat, o.lng], { icon: L.divIcon({ className: '', html: '<div class="addsub" title="Потягніть до абонента">+</div>', iconSize: [26, 26], iconAnchor: [-17, 13] }), draggable: true, bubblingMouseEvents: false, keyboard: false, zIndexOffset: 800 });
+      var tmp = null;
+      hm.on('dragstart', function () { tmp = L.polyline([], { color: '#0ca678', weight: 3, dashArray: '2 8', interactive: false }).addTo(gDraft); });
+      hm.on('drag', function () { if (tmp) tmp.setLatLngs([[o.lat, o.lng], tipOf(hm)]); });
+      hm.on('dragend', function () {
+        var tip = tipOf(hm); if (tmp) { gDraft.removeLayer(tmp); tmp = null; }
+        hm.setLatLng([o.lat, o.lng]);
+        if (map.latLngToContainerPoint(tip).distanceTo(map.latLngToContainerPoint([o.lat, o.lng])) < 50) { toast('Потягніть далі від бокса, до місця абонента', 3000); return; }
+        createSub(id, [[o.lng, o.lat], [tip.lng, tip.lat]]);
+      });
+      hm.addTo(gHandles); subHandle = hm; return;
+    }
+    if (o.kind !== 'line' && o.kind !== 'sub') return;
+    for (var i = 0; i < o.pts.length - 1; i++) (function (i) {
+      var a = o.pts[i], b = o.pts[i + 1];
+      var m = L.marker([(a[1] + b[1]) / 2, (a[0] + b[0]) / 2], { icon: L.divIcon({ className: '', html: '<div class="md"></div>', iconSize: [12, 12], iconAnchor: [6, 6] }), bubblingMouseEvents: false, keyboard: false });
+      m.on('click', function () { o.pts.splice(i + 1, 0, [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2]); selVtx = i + 1; setLineGeom(id); queueSave(id, 100); updateStats(); rebuildHandles(); refreshPanel(); });
+      m.addTo(gHandles);
+    })(i);
+    o.pts.forEach(function (p, i) {
+      if (o.kind === 'sub' && i === 0) return;
+      var m = L.marker(LL(p), { icon: L.divIcon({ className: '', html: '<div class="vt' + (i === selVtx ? ' on' : '') + '"></div>', iconSize: [18, 18], iconAnchor: [9, 9] }), draggable: true, bubblingMouseEvents: false, keyboard: false });
+      m.on('click', function () { selVtx = selVtx === i ? null : i; rebuildHandles(); refreshPanel(); });
+      m.on('drag', function () { var q = m.getLatLng(); o.pts[i] = [q.lng, q.lat]; setLineGeom(id); });
+      m.on('dragend', function () {
+        var q = m.getLatLng(), sn = o.kind === 'line' ? snapBox(q, 14) : null; if (sn) { o.pts[i] = sn; m.setLatLng(LL(sn)); }
+        setLineGeom(id); queueSave(id, 100); updateStats(); rebuildHandles(); if (o.kind === 'sub' && !o.address) fillAddress(id); var l = $('#pLen'); if (l) l.textContent = fmtLen(lineLen(o.pts));
+      });
+      m.addTo(gHandles);
+    });
+  }
+
+  function onObjClick(id, ll, isBox) {
+    if (tool === 'select') { select(id); return; }
+    var o = objs.get(id);
+    tapMap(ll, isBox && o ? [o.lng, o.lat] : null);
+  }
+  map.on('click', function (e) { tapMap(e.latlng, null); });
+  map.on('mousemove', function (e) { if ((tool === 'line' || tool === 'sub') && draft.length) { if (!rubber) rubber = L.polyline([], { color: '#0a7b76', weight: 3, dashArray: '2 8', interactive: false }).addTo(gDraft); rubber.setLatLngs([LL(draft[draft.length - 1]), e.latlng]); } });
+
+  function tapMap(ll, snapPt) {
+    if (tool === 'select') { if (sel) deselect(); return; }
+    if (tool === 'line' || tool === 'sub') { draft.push(snapPt || (tool === 'line' ? snapBox(ll, 16) : null) || [ll.lng, ll.lat]); drawDraft(); return; }
+    if (tool === 'box') {
+      var q = snapPt || [ll.lng, ll.lat], n = 1; objs.forEach(function (x) { if (x.kind === 'box' && x.type === boxType) n++; });
+      var id = uid(), o = { id: id, kind: 'box', type: boxType, name: BOX[boxType] + ' ' + n, status: 'plan', lng: q[0], lat: q[1], address: '', desc: '', date: '', photos: [] };
+      objs.set(id, o); draw(id); queueSave(id, 0); updateStats(); setTool('select'); select(id); fillAddress(id);
+    }
+  }
+
+  function drawDraft() {
+    gDraft.clearLayers(); rubber = null;
+    if (draft.length) {
+      L.polyline(draft.map(LL), { color: '#0a7b76', weight: 4, dashArray: '2 8', interactive: false }).addTo(gDraft);
+      draft.forEach(function (p) { L.circleMarker(LL(p), { radius: 5, color: '#fff', weight: 2, fillColor: '#0a7b76', fillOpacity: 1, interactive: false }).addTo(gDraft); });
+    }
+    $('#draftbar').hidden = !draft.length;
+    $('#draftInfo').textContent = (tool === 'sub' ? 'Лінія абонента · ' : 'Нова лінія · ') + draft.length + ' ' + plural(draft.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(draft));
+    $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
+  }
+  function finishLine() {
+    if (draft.length < 2) { toast('Потрібно щонайменше дві точки'); return; }
+    if (tool === 'sub') { var from = subFrom, spts = draft.slice(); draft = []; drawDraft(); setTool('select'); if (from && objs.get(from)) createSub(from, spts); return; }
+    var n = 1; objs.forEach(function (x) { if (x.kind === 'line') n++; });
+    var id = uid(), o = { id: id, kind: 'line', name: 'Магістраль ' + n, status: 'plan', laying: 'aerial', cable: '', fibers: lastFibers, desc: '', date: '', pts: draft.slice(), photos: [] };
+    objs.set(id, o); draft = []; drawDraft(); draw(id); queueSave(id, 0); updateStats(); setTool('select'); select(id);
+  }
+  function cancelDraft() {
+    draft = []; drawDraft();
+    if (tool === 'sub') { var b = subFrom; setTool('select'); if (b && objs.get(b)) select(b); }
+  }
+  $('#draftDone').onclick = finishLine; $('#draftCancel').onclick = cancelDraft;
+
+  /* ---------- інструменти ---------- */
+  var HINTS = {
+    select: 'Торкніться бокса, щоб побачити його абонентів, або лінії, щоб відкрити опис. Адресу шукайте зверху.',
+    line: 'Торкайтесь точок траси по порядку. Біля бокса точка прилипне до нього.',
+    box: 'Оберіть тип і торкніться місця на карті. Адреса підтягнеться сама.',
+    sub: 'Торкайтесь точок траси до абонента. Остання точка — місце абонента. Потім «Готово».'
+  };
+  function buildChips() { $('#chips').innerHTML = Object.keys(BOX).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
+  function setTool(t) {
+    if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
+    tool = t;
+    document.querySelectorAll('#tools [data-tool]').forEach(function (b) { b.setAttribute('aria-pressed', String(b.dataset.tool === t)); });
+    $('#hint').textContent = HINTS[t]; $('#chips').hidden = t !== 'box';
+    $('#map').classList.toggle('draw', t !== 'select');
+    if (t !== 'select' && sel) deselect();
+  }
+  $('#tools').addEventListener('click', function (e) { var b = e.target.closest('[data-tool]'); if (b) setTool(b.dataset.tool); });
+  $('#chips').addEventListener('click', function (e) { var b = e.target.closest('[data-type]'); if (b) { boxType = b.dataset.type; buildChips(); } });
+  document.addEventListener('keydown', function (e) {
+    var tag = (e.target.tagName || '').toLowerCase();
+    if (e.key === 'Escape') { if (!$('#lightbox').hidden) $('#lightbox').hidden = true; else if (draft.length) cancelDraft(); else if (!$('#menu').hidden) $('#menu').hidden = true; else if (sel) deselect(); }
+    else if (e.key === 'Enter' && draft.length && tag !== 'input' && tag !== 'textarea') finishLine();
+    else if (!$('#lightbox').hidden) { if (e.key === 'ArrowLeft') { lbIdx--; lbShow(); } if (e.key === 'ArrowRight') { lbIdx++; lbShow(); } }
+  });
+
+  /* ---------- панель ---------- */
+  var panel = $('#panel'), panelBody = $('#panelBody'), appEl = $('#app');
+  var XSVG = '<svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg>';
+  function opts(m, cur) { return Object.keys(m).map(function (k) { return '<option value="' + k + '"' + (k === cur ? ' selected' : '') + '>' + esc(m[k]) + '</option>'; }).join(''); }
+  function styleBlock(o) {
+    return '<div class="f"><span class="lab">Вигляд лінії</span><div class="status lstyle">' +
+      Object.keys(STYLES).map(function (s) { return '<button data-act="lstyle" data-v="' + s + '" aria-pressed="' + (lineStyle(o) === s) + '">' + STYLES[s] + '</button>'; }).join('') + '</div>' +
+      '<div class="swatches">' + SWATCHES.map(function (c) { return '<button class="sw" data-act="lcolor" data-v="' + c + '" style="background:' + c + '" aria-label="Колір ' + c + '" aria-pressed="' + (lineColor(o).toLowerCase() === c) + '"></button>'; }).join('') +
+      '<label class="sw custom" title="Свій колір"><input type="color" id="f-color" data-f="color" value="' + lineColor(o) + '"></label></div>' +
+      '<button class="btn" data-act="lcolorreset" style="justify-self:start">Колір за станом</button></div>';
+  }
+  function photosBlock(o) {
+    var ph = o.photos || [];
+    return '<div class="f"><span class="lab">Фото' + (ph.length ? ' · ' + ph.length : '') + '</span><div class="photos">' + ph.map(function (p, i) { return '<button class="thumb" data-act="photo" data-i="' + i + '" aria-label="Фото ' + (i + 1) + '"><img alt="" data-pid="' + esc(p.id) + '"></button>'; }).join('') + '<button class="thumb add" data-act="addphoto">+ Додати</button></div></div>';
+  }
+  function subPanelHTML(o) {
+    var box = objs.get(o.boxId), pos = posOf(o);
+    var h = '<div class="ph-head"><svg class="ico" viewBox="-12 -12 24 24"><path d="M-9 1 L0 -9 L9 1 V9 H-9 Z" fill="' + lineColor(o) + '" stroke="#fff" stroke-width="2" stroke-linejoin="round"/></svg>' +
+      '<div class="ph-title"><span class="eyebrow">Абонент' + (box ? ' · ' + esc(box.name || BOX[box.type]) : '') + '</span><strong id="pTitle">' + esc(o.name || 'Без назви') + '</strong></div><button class="x" data-act="close" aria-label="Закрити">' + XSVG + '</button></div>';
+    h += '<div class="f"><label for="f-name">Ім’я або номер договору</label><input id="f-name" data-f="name" type="text" value="' + esc(o.name) + '" autocomplete="off"></div>';
+    h += '<div class="f"><span class="lab">Стан</span><div class="status subst">' + Object.keys(SUBST).map(function (s) { return '<button class="st-' + s + '" data-act="status" data-v="' + s + '" aria-pressed="' + (o.status === s) + '">' + SUBST[s] + '</button>'; }).join('') + '</div></div>';
+    h += '<div class="f"><label for="f-address">Адреса</label><div class="coord"><input id="f-address" data-f="address" type="text" value="' + esc(o.address) + '" placeholder="вулиця, будинок, квартира" autocomplete="off"><button class="btn" data-act="geo">З карти</button></div></div>';
+    h += '<div class="f"><label for="f-desc">Опис</label><textarea id="f-desc" data-f="desc" placeholder="Телефон, тариф, обладнання, де заходить кабель">' + esc(o.desc) + '</textarea></div>';
+    h += '<div class="f"><label for="f-date">Дата підключення</label><input id="f-date" data-f="date" type="date" value="' + esc(o.date) + '"></div>';
+    h += '<div class="len"><span class="lab">Довжина лінії</span><b id="pLen">' + fmtLen(lineLen(o.pts)) + '</b></div>';
+    h += styleBlock(o);
+    h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка, щоб вибрати його.</p>';
+    if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
+    h += '<div class="f"><span class="lab">Координати абонента</span><div class="coord"><code id="pCoord">' + pos.lat.toFixed(6) + ', ' + pos.lng.toFixed(6) + '</code><button class="btn" data-act="copy">Копіювати</button></div></div>';
+    h += photosBlock(o);
+    if (box) h += '<button class="btn block" data-act="tobox">До бокса</button>';
+    h += '<button class="btn danger block" data-act="del">Видалити абонента</button>';
+    return h;
+  }
+  function panelHTML(o) {
+    if (o.kind === 'sub') return subPanelHTML(o);
+    var isLine = o.kind === 'line';
+    var h = '<div class="ph-head st-' + o.status + '">' + (isLine ? '<svg class="ico" viewBox="-12 -12 24 24"><path d="M-9 6 L-2 -4 L3 3 L9 -6" fill="none" stroke="' + lineColor(o) + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ico(o.type, o.status)) +
+      '<div class="ph-title"><span class="eyebrow">' + (isLine ? 'Магістральна лінія' : BOX[o.type]) + '</span><strong id="pTitle">' + esc(o.name || 'Без назви') + '</strong></div><button class="x" data-act="close" aria-label="Закрити">' + XSVG + '</button></div>';
+    h += '<div class="f"><label for="f-name">Назва</label><input id="f-name" data-f="name" type="text" value="' + esc(o.name) + '" autocomplete="off"></div>';
+    h += '<div class="f"><span class="lab">Стан</span><div class="status st-' + o.status + '">' + Object.keys(STATUS).map(function (s) { return '<button class="st-' + s + '" data-act="status" data-v="' + s + '" aria-pressed="' + (o.status === s) + '">' + STATUS[s] + '</button>'; }).join('') + '</div></div>';
+    if (isLine) {
+      h += '<div class="f"><span class="lab">Вигляд лінії</span><div class="status lstyle">' +
+        Object.keys(STYLES).map(function (s) { return '<button data-act="lstyle" data-v="' + s + '" aria-pressed="' + (lineStyle(o) === s) + '">' + STYLES[s] + '</button>'; }).join('') + '</div>' +
+        '<div class="swatches">' + SWATCHES.map(function (c) { return '<button class="sw" data-act="lcolor" data-v="' + c + '" style="background:' + c + '" aria-label="Колір ' + c + '" aria-pressed="' + (lineColor(o).toLowerCase() === c) + '"></button>'; }).join('') +
+        '<label class="sw custom" title="Свій колір"><input type="color" id="f-color" data-f="color" value="' + lineColor(o) + '"></label></div>' +
+        '<button class="btn" data-act="lcolorreset" style="justify-self:start">Колір за станом</button></div>';
+      h += '<div class="len"><span class="lab">Довжина по трасі</span><b id="pLen">' + fmtLen(lineLen(o.pts)) + '</b></div>';
+      h += '<div class="row2"><div class="f"><label for="f-fibers">Волокон</label><select id="f-fibers" data-f="fibers">' + FIBERS.map(function (n) { return '<option value="' + n + '"' + (n === o.fibers ? ' selected' : '') + '>' + n + '</option>'; }).join('') + '</select></div><div class="f"><label for="f-laying">Прокладка</label><select id="f-laying" data-f="laying">' + opts(LAYING, o.laying) + '</select></div></div>';
+      h += '<div class="f"><label for="f-cable">Марка кабелю</label><input id="f-cable" data-f="cable" type="text" value="' + esc(o.cable) + '" placeholder="наприклад, ОКЛ-24"></div>';
+      h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка (стане жовтим), щоб його видалити.</p>';
+      if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
+    } else {
+      h += '<div class="f"><label for="f-type">Тип</label><select id="f-type" data-f="type">' + opts(BOX, o.type) + '</select></div>';
+      h += '<div class="f"><label for="f-address">Адреса</label><div class="coord"><input id="f-address" data-f="address" type="text" value="' + esc(o.address) + '" placeholder="вулиця, будинок, місто" autocomplete="off"><button class="btn" data-act="geo">З карти</button></div></div>';
+    }
+    h += '<div class="f"><label for="f-desc">Опис</label><textarea id="f-desc" data-f="desc" placeholder="' + (isLine ? 'Звідки куди, власник каналізації, примітки' : 'Ємність, що всередині, як відкрити') + '">' + esc(o.desc) + '</textarea></div>';
+    h += '<div class="f"><label for="f-date">Дата монтажу</label><input id="f-date" data-f="date" type="date" value="' + esc(o.date) + '"></div>';
+    if (!isLine) h += '<div class="f"><span class="lab">Координати</span><div class="coord"><code id="pCoord">' + o.lat.toFixed(6) + ', ' + o.lng.toFixed(6) + '</code><button class="btn" data-act="copy">Копіювати</button></div></div><a class="btn block" target="_blank" rel="noopener" href="https://www.google.com/maps?q=' + o.lat.toFixed(6) + ',' + o.lng.toFixed(6) + '">Відкрити в Google Maps</a>';
+    if (!isLine) {
+      var subs = []; objs.forEach(function (x) { if (x.kind === 'sub' && x.boxId === o.id) subs.push(x); });
+      h += '<div class="f"><span class="lab">Абоненти' + (subs.length ? ' · ' + subs.length : '') + '</span>' +
+        subs.map(function (x) { return '<button class="btn sublist" data-act="opensub" data-id="' + esc(x.id) + '">' + esc(x.name || 'Без назви') + (x.address ? '<span> · ' + esc(x.address) + '</span>' : '') + '</button>'; }).join('') +
+        '<button class="btn" data-act="addsub">+ Додати абонента по точках</button>' +
+        '<p class="note">Або потягніть зелений «+» поруч із боксом на карті до місця абонента. Лінії абонентів видно, лише поки вибрано бокс або абонента.</p></div>';
+    }
+    var ph = o.photos || [];
+    h += '<div class="f"><span class="lab">Фото' + (ph.length ? ' · ' + ph.length : '') + '</span><div class="photos">' + ph.map(function (p, i) { return '<button class="thumb" data-act="photo" data-i="' + i + '" aria-label="Фото ' + (i + 1) + '"><img alt="" data-pid="' + esc(p.id) + '"></button>'; }).join('') + '<button class="thumb add" data-act="addphoto">+ Додати</button></div></div>';
+    h += '<button class="btn danger block" data-act="del">Видалити ' + (isLine ? 'лінію' : 'бокс') + '</button>';
+    return h;
+  }
+  var urlCache = new Map();
+  async function photoURL(id) {
+    if (urlCache.has(id)) return urlCache.get(id);
+    var r = await dbGetPhoto(id); if (!r) return null;
+    var u = URL.createObjectURL(r.blob); urlCache.set(id, u); return u;
+  }
+  function hydrate(root) { root.querySelectorAll('img[data-pid]').forEach(function (im) { photoURL(im.dataset.pid).then(function (u) { if (u) im.src = u; }); }); }
+  function openPanel() { var o = sel && objs.get(sel); if (!o) return; panelBody.innerHTML = panelHTML(o); hydrate(panelBody); panel.hidden = false; appEl.classList.add('panel-open'); panelBody.scrollTop = 0; setTimeout(function () { map.invalidateSize(); }, 50); }
+  function closePanel() { panel.hidden = true; appEl.classList.remove('panel-open'); setTimeout(function () { map.invalidateSize(); }, 50); }
+  function refreshPanel() { var o = sel && objs.get(sel); if (!o || panel.hidden) return; var st = panelBody.scrollTop; panelBody.innerHTML = panelHTML(o); hydrate(panelBody); panelBody.scrollTop = st; }
+
+  panel.addEventListener('input', function (e) {
+    var f = e.target.dataset.f, o = sel && objs.get(sel); if (!f || !o) return;
+    o[f] = f === 'fibers' ? parseInt(e.target.value, 10) : e.target.value;
+    if (f === 'fibers') { lastFibers = o.fibers; draw(sel); rebuildHandles(); }
+    if (f === 'color') { draw(sel); rebuildHandles(); }
+    if (f === 'name') { $('#pTitle').textContent = o.name || 'Без назви'; var s = shapes.get(sel); if (s && s.marker) s.marker.setTooltipContent(esc(o.name || BOX[o.type])); else if (s && s.pin) s.pin.setTooltipContent(subLabel(o)); else if (s && s.hit) s.hit.setTooltipContent(lineLabel(o));
+    if (f === 'address' && o.kind === 'sub') { var s2 = shapes.get(sel); if (s2 && s2.pin) s2.pin.setTooltipContent(subLabel(o)); } }
+    if (f === 'laying' || f === 'cable') { /* лише дані */ }
+    queueSave(sel);
+  });
+  panel.addEventListener('change', function (e) {
+    var f = e.target.dataset.f, o = sel && objs.get(sel);
+    if (f === 'type' && o) { draw(sel); var s = shapes.get(sel); if (s && s.marker) s.marker.dragging.enable(); refreshPanel(); }
+  });
+  panel.addEventListener('click', function (e) {
+    var b = e.target.closest('[data-act]'); if (!b) return;
+    var act = b.dataset.act, o = sel && objs.get(sel);
+    if (act === 'close') deselect();
+    else if (act === 'status' && o) { o.status = b.dataset.v; draw(sel); if (o.kind === 'line') rebuildHandles(); queueSave(sel, 100); refreshPanel(); if (o.kind === 'box') { var s = shapes.get(sel); if (s) s.marker.dragging.enable(); } }
+    else if (act === 'geo' && o) { b.textContent = '…'; fillAddress(sel, true).then(function () { var inp = $('#f-address'); if (inp && o.address) inp.value = o.address; b.textContent = 'З карти'; }); }
+    else if (act === 'opensub') select(b.dataset.id);
+    else if (act === 'tobox' && o) select(o.boxId);
+    else if (act === 'addsub' && o) startSub(sel);
+    else if (act === 'lstyle' && o) { o.style = b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'lcolor' && o) { o.color = b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'lcolorreset' && o) { delete o.color; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'copy' && o) copyCoord(o);
+    else if (act === 'addphoto') $('#photoIn').click();
+    else if (act === 'photo') openLightbox(parseInt(b.dataset.i, 10));
+    else if (act === 'delvtx' && o && selVtx != null && o.pts.length > 2) { o.pts.splice(selVtx, 1); selVtx = null; setLineGeom(sel); queueSave(sel, 100); updateStats(); rebuildHandles(); refreshPanel(); }
+    else if (act === 'del' && o) {
+      if (armedDelete !== sel) { armedDelete = sel; b.classList.add('armed'); b.textContent = 'Торкніться ще раз, щоб видалити'; setTimeout(function () { if (armedDelete === sel && b.isConnected) { armedDelete = null; b.classList.remove('armed'); b.textContent = delLabel(o); } }, 3500); }
+      else { var id = sel, parent = o.kind === 'sub' ? o.boxId : null; deselect(); removeObj(id); updateStats(); toast('Видалено'); if (parent && objs.get(parent)) select(parent); }
+    }
+  });
+  function copyCoord(o) {
+    var pp = posOf(o), txt = pp.lat.toFixed(6) + ', ' + pp.lng.toFixed(6);
+    var fb = function () { var r = document.createRange(); r.selectNodeContents($('#pCoord')); var s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Виділено, скопіюйте вручну'); };
+    try { navigator.clipboard.writeText(txt).then(function () { toast('Координати скопійовано'); }, fb); } catch (e) { fb(); }
+  }
+
+  /* ---------- фото ---------- */
+  async function toJpeg(file, max, q) {
+    var bmp; try { bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }); } catch (e) { bmp = await createImageBitmap(file); }
+    var s = Math.min(1, max / Math.max(bmp.width, bmp.height)), c = document.createElement('canvas');
+    c.width = Math.round(bmp.width * s); c.height = Math.round(bmp.height * s); c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
+    return new Promise(function (r) { c.toBlob(r, 'image/jpeg', q); });
+  }
+  $('#photoIn').addEventListener('change', async function (e) {
+    var files = Array.from(e.target.files || []); e.target.value = '';
+    var id = sel, o = id && objs.get(id); if (!o || !files.length) return;
+    var done = 0;
+    for (var i = 0; i < files.length; i++) {
+      toast('Обробка фото ' + (i + 1) + ' з ' + files.length + '…', 20000);
+      try { var blob = await toJpeg(files[i], 1600, 0.84), pid = 'p' + uid(); await putPhoto({ id: pid, blob: blob }); o.photos = (o.photos || []).concat([{ id: pid }]); done++; queueSave(id, 0); if (sel === id) refreshPanel(); }
+      catch (err) { toast('Не вдалося обробити це зображення.', 3500); break; }
+    }
+    if (done) toast(done === 1 ? 'Фото додано' : 'Додано фото: ' + done);
+  });
+  var lbIdx = 0;
+  function openLightbox(i) { lbIdx = i; $('#lightbox').hidden = false; lbShow(); }
+  async function lbShow() {
+    var o = sel && objs.get(sel), ph = o && o.photos || [];
+    if (!ph.length) { $('#lightbox').hidden = true; return; }
+    lbIdx = (lbIdx + ph.length) % ph.length;
+    var u = await photoURL(ph[lbIdx].id); $('#lbImg').src = u || '';
+    $('#lbCount').textContent = (lbIdx + 1) + ' / ' + ph.length; $('#lbPrev').hidden = $('#lbNext').hidden = ph.length < 2;
+  }
+  $('#lbPrev').onclick = function () { lbIdx--; lbShow(); }; $('#lbNext').onclick = function () { lbIdx++; lbShow(); };
+  $('#lbClose').onclick = function () { $('#lightbox').hidden = true; };
+  $('#lbDel').onclick = function () {
+    var b = $('#lbDel'), o = sel && objs.get(sel); if (!o) return;
+    if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Точно видалити?'; setTimeout(function () { delete b.dataset.armed; b.textContent = 'Видалити'; }, 3000); return; }
+    delete b.dataset.armed; b.textContent = 'Видалити';
+    var p = o.photos.splice(lbIdx, 1)[0]; if (p) { dbDel('photos', p.id); urlCache.delete(p.id); }
+    queueSave(sel, 0); refreshPanel(); lbShow();
+  };
+
+  /* ---------- меню, резервна копія, GeoJSON ---------- */
+  var menu = $('#menu');
+  $('#btnMenu').onclick = function () { menu.hidden = !menu.hidden; $('#btnMenu').setAttribute('aria-expanded', String(!menu.hidden)); };
+  $('#mFit').onclick = function () { menu.hidden = true; map.fitBounds(BOUNDS); };
+  $('#mFitObj').onclick = function () { menu.hidden = true; fitObjs(); };
+  function goto() {
+    var m = $('#gotoIn').value.replace(',', ' ').replace(';', ' ').trim().split(/\s+/).map(parseFloat);
+    if (m.length < 2 || isNaN(m[0]) || isNaN(m[1]) || Math.abs(m[0]) > 85 || Math.abs(m[1]) > 180) { toast('Введіть координати так: 50.4501, 30.5234', 3500); return; }
+    menu.hidden = true; map.setView([m[0], m[1]], 18);
+  }
+  $('#gotoBtn').onclick = goto; $('#gotoIn').addEventListener('keydown', function (e) { if (e.key === 'Enter') goto(); });
+  function download(name, text, type) { var a = document.createElement('a'), u = URL.createObjectURL(new Blob([text], { type: type })); a.href = u; a.download = name; document.body.appendChild(a); a.click(); a.remove(); setTimeout(function () { URL.revokeObjectURL(u); }, 4000); }
+  var stamp = function () { return new Date().toISOString().slice(0, 10); };
+  function blobToDataURL(b) { return new Promise(function (r) { var f = new FileReader(); f.onload = function () { r(f.result); }; f.readAsDataURL(b); }); }
+  $('#mBackup').onclick = async function () {
+    menu.hidden = true; toast('Готую копію…', 15000);
+    var out = { app: 'merezha', version: 1, objects: [], photos: {} };
+    for (const o of objs.values()) { out.objects.push(o); for (const p of (o.photos || [])) { var r = await dbGetPhoto(p.id); if (r) out.photos[p.id] = await blobToDataURL(r.blob); } }
+    download('merezha-kopiya-' + stamp() + '.json', JSON.stringify(out), 'application/json'); toast('Копію збережено у завантаження');
+  };
+  $('#mRestore').onclick = function () { menu.hidden = true; $('#restoreIn').click(); };
+  $('#restoreIn').addEventListener('change', async function (e) {
+    var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    try {
+      var d = JSON.parse(await f.text()); if (d.app !== 'merezha') throw new Error('x');
+      for (var pid in d.photos) { var blob = await (await fetch(d.photos[pid])).blob(); await putPhoto({ id: pid, blob: blob }); }
+      d.objects.forEach(function (o) { objs.set(o.id, o); dbPut('objs', o); draw(o.id); });
+      updateStats(); fitObjs(); toast('Відновлено об’єктів: ' + d.objects.length);
+    } catch (err) { toast('Це не файл резервної копії.', 3500); }
+  });
+  $('#mExport').onclick = function () {
+    menu.hidden = true; if (!objs.size) { toast('Поки нічого експортувати.'); return; }
+    var feats = [];
+    objs.forEach(function (o, id) {
+      var pr = { id: id, kind: o.kind, name: o.name, status: o.status, description: o.desc || '', date: o.date || '', photos: (o.photos || []).length };
+      if (o.kind === 'box') { pr.type = o.type; pr.address = o.address || ''; feats.push({ type: 'Feature', properties: pr, geometry: { type: 'Point', coordinates: [o.lng, o.lat] } }); }
+      else if (o.kind === 'sub') { pr.boxId = o.boxId; pr.address = o.address || ''; pr.style = lineStyle(o); pr.color = lineColor(o); pr.length_m = Math.round(lineLen(o.pts)); feats.push({ type: 'Feature', properties: pr, geometry: { type: 'LineString', coordinates: o.pts } }); }
+      else { pr.fibers = o.fibers; pr.laying = o.laying; pr.style = lineStyle(o); pr.color = lineColor(o); pr.cable = o.cable || ''; pr.length_m = Math.round(lineLen(o.pts)); feats.push({ type: 'Feature', properties: pr, geometry: { type: 'LineString', coordinates: o.pts } }); }
+    });
+    download('merezha-' + stamp() + '.geojson', JSON.stringify({ type: 'FeatureCollection', features: feats }, null, 1), 'application/geo+json'); toast('GeoJSON збережено');
+  };
+  $('#mImport').onclick = function () { menu.hidden = true; $('#impIn').click(); };
+  $('#impIn').addEventListener('change', async function (e) {
+    var f = e.target.files && e.target.files[0]; e.target.value = ''; if (!f) return;
+    var gj; try { gj = JSON.parse(await f.text()); } catch (err) { toast('Файл не схожий на GeoJSON.', 3500); return; }
+    var feats = gj.type === 'FeatureCollection' ? gj.features : gj.type === 'Feature' ? [gj] : [], n = 0;
+    (feats || []).slice(0, 1000).forEach(function (ft) {
+      var gm = ft && ft.geometry, pr = ft && ft.properties || {}, id = uid();
+      var base = { id: id, name: String(pr.name || ''), status: STATUS[pr.status] ? pr.status : 'built', desc: String(pr.description || pr.desc || ''), date: String(pr.date || ''), photos: [] }, o = null;
+      if (gm && gm.type === 'Point') o = Object.assign(base, { kind: 'box', type: BOX[pr.type] ? pr.type : 'closure', address: String(pr.address || ''), lng: +gm.coordinates[0], lat: +gm.coordinates[1] });
+      else if (gm && gm.type === 'LineString' && gm.coordinates.length > 1 && pr.kind !== 'sub') o = Object.assign(base, { kind: 'line', laying: LAYING[pr.laying] ? pr.laying : 'aerial', cable: String(pr.cable || ''), fibers: parseInt(pr.fibers, 10) || 12, style: STYLES[pr.style] ? pr.style : undefined, color: /^#[0-9a-f]{6}$/i.test(pr.color || '') ? pr.color : undefined, pts: gm.coordinates.map(function (c) { return [+c[0], +c[1]]; }) });
+      if (!o) return; objs.set(id, o); draw(id); queueSave(id, 0); n++;
+    });
+    updateStats(); if (n) { fitObjs(); toast('Імпортовано об’єктів: ' + n); } else toast('У файлі немає точок чи ліній.', 3500);
+  });
+
+  /* ---------- шар «Електромережі» (OpenStreetMap через Overpass) ---------- */
+  var gPower = L.featureGroup().addTo(map), powerOn = false, powerBox = null, powerT = 0, powerCtl = null;
+  function setPowerBtn() { var b = $('#btnPower'); b.setAttribute('aria-pressed', String(powerOn)); b.style.background = powerOn ? 'var(--accent)' : ''; b.style.color = powerOn ? 'var(--accent-ink)' : ''; }
+  async function loadPower() {
+    if (!powerOn) return;
+    if (map.getZoom() < 14) { gPower.clearLayers(); powerBox = null; toast('Наблизьте карту, щоб побачити лінії й опори', 2500); return; }
+    var view = map.getBounds();
+    if (powerBox && powerBox.contains(view)) return;
+    var bb = view.pad(0.25), q = '[out:json][timeout:25];(way["power"~"^(line|minor_line)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + ');node["power"~"^(pole|tower)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + '););out geom 6000;';
+    if (powerCtl) powerCtl.abort(); powerCtl = new AbortController();
+    try {
+      var r = await fetch('https://overpass-api.de/api/interpreter', { method: 'POST', body: 'data=' + encodeURIComponent(q), headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, signal: powerCtl.signal });
+      if (!r.ok) throw new Error('http ' + r.status);
+      var j = await r.json(); if (!powerOn) return;
+      gPower.clearLayers(); var poles = 0, lines = 0;
+      (j.elements || []).forEach(function (el) {
+        var t = el.tags || {};
+        if (el.type === 'way' && el.geometry) {
+          var minor = t.power === 'minor_line', hv = !minor && parseInt(t.voltage, 10) >= 110000;
+          L.polyline(el.geometry.map(function (g) { return [g.lat, g.lon]; }), { color: hv ? '#b45309' : '#6b7280', weight: hv ? 2.5 : 1.8, opacity: .85, dashArray: minor ? '6 4' : null, interactive: false }).addTo(gPower); lines++;
+        } else if (el.type === 'node') {
+          L.circleMarker([el.lat, el.lon], { radius: t.power === 'tower' ? 4.5 : 3, color: '#fff', weight: 1, fillColor: t.power === 'tower' ? '#b45309' : '#374151', fillOpacity: .95, interactive: false }).addTo(gPower); poles++;
+        }
+      });
+      gPower.bringToBack(); powerBox = bb;
+      toast('Електромережі OSM: ліній ' + lines + ', опор ' + poles + (lines + poles === 0 ? '. У цьому місці OSM даних немає.' : ''), 3500);
+    } catch (e) { if (e && e.name === 'AbortError') return; toast('Не вдалося завантажити електромережі. Спробуйте ще раз.', 3500); }
+  }
+  function setPower(on) {
+    powerOn = on; try { localStorage.setItem('mm-power', on ? '1' : '0'); } catch (e) {}
+    setPowerBtn(); if (!on) { gPower.clearLayers(); powerBox = null; if (powerCtl) powerCtl.abort(); } else loadPower();
+  }
+  $('#btnPower').onclick = function () { setPower(!powerOn); };
+  map.on('moveend', function () { if (powerOn) { clearTimeout(powerT); powerT = setTimeout(loadPower, 700); } });
+  try { if (localStorage.getItem('mm-power') === '1') { powerOn = true; setPowerBtn(); setTimeout(loadPower, 1500); } } catch (e) {}
+
+  /* ---------- запуск ---------- */
+  async function init() {
+    buildChips(); setTool('select'); drawDraft();
+    try { dbp = openDb(); await dbp; } catch (e) { memMode = true; $('#banner').hidden = false; $('#banner').textContent = 'Браузер не дозволяє зберігати дані (приватне вікно?). Зміни зникнуть після закриття сторінки.'; }
+    var rows = await dbAll('objs').catch(function () { return []; });
+    rows.forEach(function (o) { objs.set(o.id, o); draw(o.id); });
+    updateStats(); if (rows.length && !restored) fitObjs();
+    loadOblasts();
+  }
+  window.addEventListener('beforeunload', function () { saveT.forEach(function (_, id) { var o = objs.get(id); if (o) dbPut('objs', JSON.parse(JSON.stringify(o))); }); });
+  init();
+})();
+</script>
+</body>
+</html>
