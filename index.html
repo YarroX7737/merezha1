@@ -777,7 +777,7 @@ table.tb tr.sum td { font-weight: 700; }
     if (tool === 'select') {
       if (isBox && o && sel !== id) {
         var now = Date.now();
-        if (!(boxTap.id === id && now - boxTap.t < 900)) { boxTap = { id: id, t: now }; toast((o.name || BOX[o.type]) + ': торкніться ще раз, щоб відкрити', 1400); return; }
+        if (!(boxTap.id === id && now - boxTap.t < 1600)) { boxTap = { id: id, t: now }; toast((o.name || BOX[o.type]) + ': торкніться ще раз, щоб відкрити', 1400); return; }
         boxTap = { id: null, t: 0 };
       }
       select(id); return;
@@ -861,7 +861,7 @@ table.tb tr.sum td { font-weight: 700; }
   $('#measDone').onclick = function () { mpts = []; setTool('select'); drawMeas(); };
   function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
   var chipsOpen = false;
-  function boxHint() { return 'Зараз: ' + BOX[boxType] + '. Щоб обрати OLT, Сервер, Колодязь чи Опору, торкніться кнопки «Меню ▾» ще раз. Потім торкніться карти.'; }
+  function boxHint() { return 'Зараз: ' + BOX[boxType] + '. Оберіть тип у списку, потім торкніться карти. Список відкривається кнопкою «Меню ▾».'; }
   function setTool(t) {
     if (RO && (t === 'line' || t === 'box' || t === 'sub')) t = 'select';
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
@@ -874,7 +874,7 @@ table.tb tr.sum td { font-weight: 700; }
   }
   $('#tools').addEventListener('click', function (e) {
     var b = e.target.closest('[data-tool]'); if (!b) return;
-    if (b.dataset.tool === 'box') { var was = tool === 'box'; chipsOpen = was ? !chipsOpen : false; setTool('box'); }
+    if (b.dataset.tool === 'box') { var was = tool === 'box'; chipsOpen = was ? !chipsOpen : true; setTool('box'); }
     else setTool(b.dataset.tool);
   });
   $('#chips').addEventListener('click', function (e) { var b = e.target.closest('[data-type]'); if (b) { boxType = b.dataset.type; buildChips(); chipsOpen = false; $('#chips').hidden = true; $('#hint').textContent = boxHint(); } });
