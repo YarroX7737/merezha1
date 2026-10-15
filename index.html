@@ -237,6 +237,9 @@ body { font-size: 15px; }
 .pulse.rev { animation-direction: reverse; }
 .leaflet-container:not(.z-hi) .pulse { display: none; }
 @media (prefers-reduced-motion: reduce) { .pulse { animation: none; } }
+#draftbar #draftInfo { flex: 1 1 100%; text-align: center; }
+#draftbar #draftUplink { flex: 1 1 0; }
+#draftbar .btn[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); border-color: var(--accent); }
 </style>
 </head>
 <body>
@@ -260,6 +263,7 @@ body { font-size: 15px; }
     <div class="zoom"><button id="zin" aria-label="Збільшити">+</button><button id="zout" aria-label="Зменшити">−</button></div>
     <div id="draftbar" hidden>
       <span id="draftInfo"></span>
+      <button class="btn" id="draftUplink" aria-pressed="false">Аплінк</button>
       <button class="btn" id="draftUndo" aria-label="Прибрати останню точку">↩ Назад</button>
       <button class="btn" id="draftCancel">Скасувати</button>
       <button class="btn primary" id="draftDone">Готово</button>
@@ -574,7 +578,7 @@ body { font-size: 15px; }
     var id = uid(), o = { id: id, kind: 'sub', boxId: boxId, name: 'Абонент ' + n, status: 'built', address: '', desc: '', date: '', pts: pts, photos: [] };
     objs.set(id, o); queueSave(id, 0); updateStats(); select(id); fillAddress(id);
   }
-  var extendId = null, extendEnd = 'end';
+  var extendId = null, extendEnd = 'end', draftUplink = false;
   function startExtend(id, end) {
     var o = objs.get(id); if (!o || o.kind !== 'line') return;
     extendId = id; extendEnd = end; setTool('line');
@@ -701,6 +705,7 @@ body { font-size: 15px; }
     }
     $('#draftbar').hidden = !draft.length;
     $('#draftInfo').textContent = (tool === 'sub' ? 'Лінія абонента · ' : extendId ? 'Продовження лінії · ' : 'Нова лінія · ') + draft.length + ' ' + plural(draft.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(draft));
+    $('#draftUplink').hidden = (tool === 'sub' || !!extendId); $('#draftUplink').setAttribute('aria-pressed', String(draftUplink));
     $('#draftUndo').disabled = (tool === 'sub' || extendId) ? draft.length < 2 : !draft.length; $('#draftUndo').style.opacity = $('#draftUndo').disabled ? .5 : 1; $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
   }
   function finishLine() {
@@ -711,16 +716,18 @@ body { font-size: 15px; }
       return;
     }
     if (tool === 'sub') { var from = subFrom, spts = draft.slice(); draft = []; drawDraft(); setTool('select'); if (from && objs.get(from)) createSub(from, spts); return; }
-    var n = 1; objs.forEach(function (x) { if (x.kind === 'line') n++; });
-    var id = uid(), o = { id: id, kind: 'line', name: 'Магістраль ' + n, status: 'plan', laying: 'aerial', cable: '', fibers: lastFibers, desc: '', date: '', pts: draft.slice(), photos: [] };
+    var n = 1, up = draftUplink; draftUplink = false;
+    objs.forEach(function (x) { if (x.kind === 'line' && !!x.uplink === up) n++; });
+    var id = uid(), o = { id: id, kind: 'line', name: (up ? 'Аплінк ' : 'Магістраль ') + n, uplink: up, signal: up ? 'fwd' : '', status: 'plan', laying: 'aerial', cable: '', fibers: lastFibers, desc: '', date: '', pts: draft.slice(), photos: [] };
     objs.set(id, o); draft = []; drawDraft(); draw(id); queueSave(id, 0); updateStats(); setTool('select'); select(id);
   }
   function cancelDraft() {
-    draft = []; drawDraft();
+    draftUplink = false; draft = []; drawDraft();
     if (extendId) { var xid = extendId; extendId = null; setTool('select'); if (objs.get(xid)) select(xid); return; }
     if (tool === 'sub') { var b = subFrom; setTool('select'); if (b && objs.get(b)) select(b); }
   }
   $('#draftUndo').onclick = function () { if ((tool === 'sub' || extendId) ? draft.length > 1 : draft.length) { draft.pop(); if (rubber) { gDraft.removeLayer(rubber); rubber = null; } drawDraft(); } };
+  $('#draftUplink').onclick = function () { draftUplink = !draftUplink; drawDraft(); };
   $('#draftDone').onclick = finishLine; $('#draftCancel').onclick = cancelDraft;
 
   /* ---------- інструменти ---------- */
@@ -794,7 +801,7 @@ body { font-size: 15px; }
     if (o.kind === 'sub') return subPanelHTML(o);
     var isLine = o.kind === 'line';
     var h = '<div class="ph-head st-' + o.status + '">' + (isLine ? '<svg class="ico" viewBox="-12 -12 24 24"><path d="M-9 6 L-2 -4 L3 3 L9 -6" fill="none" stroke="' + lineColor(o) + '" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' : ico(o.type, o.status, o.ports)) +
-      '<div class="ph-title"><span class="eyebrow">' + (isLine ? 'Магістральна лінія' : BOX[o.type]) + '</span><strong id="pTitle">' + esc(o.name || 'Без назви') + '</strong></div><button class="x" data-act="close" aria-label="Закрити">' + XSVG + '</button></div>';
+      '<div class="ph-title"><span class="eyebrow">' + (isLine ? (o.uplink ? 'Аплінк' : 'Магістральна лінія') : BOX[o.type]) + '</span><strong id="pTitle">' + esc(o.name || 'Без назви') + '</strong></div><button class="x" data-act="close" aria-label="Закрити">' + XSVG + '</button></div>';
     h += '<div class="f"><label for="f-name">Назва</label><input id="f-name" data-f="name" type="text" value="' + esc(o.name) + '" autocomplete="off"></div>';
     h += '<div class="f"><span class="lab">Стан</span><div class="status st-' + o.status + '">' + Object.keys(STATUS).map(function (s) { return '<button class="st-' + s + '" data-act="status" data-v="' + s + '" aria-pressed="' + (o.status === s) + '">' + STATUS[s] + '</button>'; }).join('') + '</div></div>';
     if (isLine) {
@@ -808,6 +815,7 @@ body { font-size: 15px; }
       h += '<div class="f"><label for="f-cable">Марка кабелю</label><input id="f-cable" data-f="cable" type="text" value="' + esc(o.cable) + '" placeholder="наприклад, ОКЛ-24"></div>';
       h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка (стане жовтим), щоб його видалити.</p>';
       if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
+      h += '<div class="f"><span class="lab">Тип лінії</span><div class="status st-built" style="grid-template-columns:repeat(2,1fr)">' + [[0, 'Магістраль'], [1, 'Аплінк']].map(function (x) { return '<button data-act="uplink" data-v="' + x[0] + '" aria-pressed="' + (!!o.uplink === !!x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div></div>';
       h += '<div class="f"><span class="lab">Анімація сигналу</span><div class="status st-built">' + [['off', 'Вимк'], ['fwd', 'Вперед'], ['back', 'Назад']].map(function (x) { return '<button data-act="signal" data-v="' + x[0] + '" aria-pressed="' + ((o.signal || 'off') === x[0]) + '">' + x[1] + '</button>'; }).join('') + '</div><p class="note">Світлі точки біжать по лінії. «Вперед» — від першої точки лінії до останньої, «Назад» — навпаки. На аварійній лінії точки жовті.</p></div>';
       h += '<div class="f"><span class="lab">Редагування лінії</span><p class="note">Тягніть білі кружечки, щоб змінити форму. Торкніться маленької цятки між ними, щоб додати точку. Тягніть синю кнопку з хрестиком, щоб перемістити всю лінію.</p><div class="row2"><button class="btn" data-act="extend" data-v="end">+ Продовжити з кінця</button><button class="btn" data-act="extend" data-v="start">+ Продовжити з початку</button></div></div>';
     } else {
@@ -878,6 +886,7 @@ body { font-size: 15px; }
     else if (act === 'lcolor' && o) { o.color = b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'lcolorreset' && o) { delete o.color; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'ports' && o) { o.ports = parseInt(b.dataset.v, 10); if (!o.pons) o.pons = []; while (o.pons.length < 8) o.pons.push(''); draw(sel); var sp = shapes.get(sel); if (sp && sp.marker) sp.marker.dragging.enable(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'uplink' && o && o.kind === 'line') { o.uplink = b.dataset.v === '1'; if (o.uplink && !o.signal) o.signal = 'fwd'; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'signal' && o && o.kind === 'line') { o.signal = b.dataset.v === 'off' ? '' : b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'extend' && o && o.kind === 'line') startExtend(sel, b.dataset.v);
     else if (act === 'copy' && o) copyCoord(o);
