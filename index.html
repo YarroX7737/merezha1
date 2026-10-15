@@ -287,6 +287,8 @@ table.tb tr.sum td { font-weight: 700; }
 .sform .r { display: grid; grid-template-columns: 1fr 74px; gap: 6px; }
 .sform select, .sform input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 8px; font-size: 15px; }
 #toast button { margin-left: 10px; border: 1px solid var(--bg); background: transparent; color: var(--bg); border-radius: 8px; padding: 3px 10px; font-weight: 700; }
+.car { font-size: 11px; margin-left: -2px; opacity: .8; }
+#tools [data-tool="box"] { position: relative; }
 </style>
 </head>
 <body>
@@ -328,7 +330,7 @@ table.tb tr.sum td { font-weight: 700; }
       <div class="seg" id="tools" role="toolbar" aria-label="Інструменти">
         <button data-tool="select" aria-pressed="true"><svg viewBox="0 0 24 24"><path d="M5 3l14 8-6 2-2 6z"/></svg>Вибір</button>
         <button data-tool="line" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M4 18l6-9 5 5 5-8"/><circle cx="4" cy="18" r="1.5"/><circle cx="20" cy="6" r="1.5"/></svg>Лінія</button>
-        <button data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M12 9v6M9 12h6"/></svg>Бокс</button>
+        <button data-tool="box" aria-pressed="false"><svg viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="3"/><path d="M12 9v6M9 12h6"/></svg>Бокс<b class="car">▾</b></button>
         <button data-tool="measure" aria-pressed="false"><svg viewBox="0 0 24 24"><path d="M3 16l13-13 5 5-13 13z"/><path d="M7 12l2 2M10 9l2 2M13 6l2 2"/></svg>Міряти</button>
       </div>
     </div>
@@ -859,7 +861,7 @@ table.tb tr.sum td { font-weight: 700; }
   $('#measDone').onclick = function () { mpts = []; setTool('select'); drawMeas(); };
   function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
   var chipsOpen = false;
-  function boxHint() { return 'Торкніться карти, щоб поставити: ' + BOX[boxType] + '. Щоб змінити тип, натисніть «Бокс» ще раз.'; }
+  function boxHint() { return 'Зараз: ' + BOX[boxType] + '. Щоб обрати OLT, Сервер, Колодязь чи Опору, торкніться кнопки «Бокс ▾» ще раз. Потім торкніться карти.'; }
   function setTool(t) {
     if (RO && (t === 'line' || t === 'box' || t === 'sub')) t = 'select';
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
