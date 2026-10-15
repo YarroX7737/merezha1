@@ -495,7 +495,7 @@ table.tb tr.sum td { font-weight: 700; }
   var gObjs = L.layerGroup().addTo(map), gHandles = L.layerGroup().addTo(map), gDraft = L.layerGroup().addTo(map), gFound = L.layerGroup().addTo(map), gObl = L.layerGroup().addTo(map);
   var rubber = null, subHandle = null, subFrom = null;
 
-  function zoomClasses() { var z = map.getZoom(), el = map.getContainer(), c = el.classList; c.toggle('z-low', z < 15); c.toggle('z-hi', z >= 12); el.style.setProperty('--iz', String(z >= 16 ? 1 : Math.max(0.3, 1 - (16 - z) * 0.15))); }
+  function zoomClasses() { var z = map.getZoom(), el = map.getContainer(), c = el.classList; c.toggle('z-low', z < 15); c.toggle('z-hi', z >= 12); el.style.setProperty('--iz', String(z >= 17 ? 1 : Math.max(0.18, 1 - (17 - z) * 0.22))); }
   map.on('zoomend', zoomClasses); zoomClasses();
   $('#zin').onclick = function () { map.zoomIn(); }; $('#zout').onclick = function () { map.zoomOut(); };
 
