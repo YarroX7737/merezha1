@@ -723,7 +723,7 @@ body { font-size: 15px; }
   };
   function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
   var chipsOpen = false;
-  function boxHint() { return 'Торкніться карти, щоб поставити: ' + BOX[boxType] + '. Інший тип: кнопка «Бокс».'; }
+  function boxHint() { return 'Торкніться карти, щоб поставити: ' + BOX[boxType] + '. Щоб змінити тип, натисніть «Бокс» ще раз.'; }
   function setTool(t) {
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
     tool = t;
@@ -734,7 +734,7 @@ body { font-size: 15px; }
   }
   $('#tools').addEventListener('click', function (e) {
     var b = e.target.closest('[data-tool]'); if (!b) return;
-    if (b.dataset.tool === 'box') { var was = tool === 'box'; chipsOpen = was ? !chipsOpen : true; setTool('box'); }
+    if (b.dataset.tool === 'box') { var was = tool === 'box'; chipsOpen = was ? !chipsOpen : false; setTool('box'); }
     else setTool(b.dataset.tool);
   });
   $('#chips').addEventListener('click', function (e) { var b = e.target.closest('[data-type]'); if (b) { boxType = b.dataset.type; buildChips(); chipsOpen = false; $('#chips').hidden = true; $('#hint').textContent = boxHint(); } });
