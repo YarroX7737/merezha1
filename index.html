@@ -952,6 +952,7 @@ table.tb tr.sum td { font-weight: 700; }
         h += '<div class="f"><span class="lab">Порти OLT (PON)</span><div class="status st-built" style="grid-template-columns:repeat(2,1fr)">' + [4, 8].map(function (n) { return '<button data-act="ports" data-v="' + n + '" aria-pressed="' + (np === n) + '">' + n + (n === 4 ? ' порти' : ' портів') + '</button>'; }).join('') + '</div></div>';
         h += '<div class="f"><span class="lab">Підписи портів</span><div style="display:grid;gap:8px">' + Array.from({ length: np }, function (_, i) { return '<div class="coord"><span class="note" style="min-width:50px">PON ' + (i + 1) + '</span><input data-pon="' + i + '" type="text" value="' + esc((o.pons || [])[i] || '') + '" placeholder="Куди йде: вулиця, район…" autocomplete="off"></div>'; }).join('') + '</div></div>';
       }
+      if (o.type === 'olt' || o.type === 'cabinet') h += uplinkBlock(o);
       h += '<div class="f"><label for="f-address">Адреса</label><div class="coord"><input id="f-address" data-f="address" type="text" value="' + esc(o.address) + '" placeholder="вулиця, будинок, місто" autocomplete="off"><button class="btn" data-act="geo">З карти</button></div></div>';
     }
     h += '<div class="f"><label for="f-desc">Опис</label><textarea id="f-desc" data-f="desc" placeholder="' + (isLine ? 'Звідки куди, власник каналізації, примітки' : 'Ємність, що всередині, як відкрити') + '">' + esc(o.desc) + '</textarea></div>';
@@ -978,6 +979,16 @@ table.tb tr.sum td { font-weight: 700; }
     var n = Math.min(o.fibers || 12, 144), rows = '';
     for (var i = 1; i <= n; i++) { var f = fibInfo(o, i); rows += '<div class="coord"><input type="color" class="fcol" data-flc="' + i + '" value="' + esc(f.c) + '" aria-label="Колір волокна ' + i + '"><span class="note" style="min-width:26px">№' + i + '</span><input data-fl="' + i + '" type="text" value="' + esc(f.t) + '" placeholder="' + esc(f.def) + ' — підпис" autocomplete="off"></div>'; }
     return '<details class="f"><summary class="lab" style="cursor:pointer">Волокна: кольори і підписи · ' + n + '</summary><div style="display:grid;gap:6px;margin-top:8px">' + rows + '<button class="btn" data-act="fldef">Скинути кольори до стандартних</button></div></details>';
+  }
+  function uplinkBlock(o) {
+    var opts = '<option value="">— не вказано —</option>', down = [];
+    objs.forEach(function (x, id) {
+      if (x.kind !== 'box' || id === o.id) return;
+      if (x.type === 'olt' || x.type === 'cabinet') opts += '<option value="' + esc(id) + '"' + (o.uplink === id ? ' selected' : '') + '>' + esc(BOX[x.type] + ': ' + (x.name || 'Без назви')) + '</option>';
+      if (x.uplink === o.id) down.push(x);
+    });
+    return '<div class="f"><label for="f-uplink">Аплінк: з чим з’єднується</label><select id="f-uplink" data-f="uplink">' + opts + '</select>' +
+      (down.length ? '<span class="lab" style="margin-top:6px">Підключені до цього</span>' + down.map(function (x) { return '<button class="btn sublist" data-act="opensub" data-id="' + esc(x.id) + '">' + esc(BOX[x.type] + ': ' + (x.name || 'Без назви')) + '</button>'; }).join('') : '') + '</div>';
   }
   function nearLines(b) {
     var out = [], me = [b.lng, b.lat];
