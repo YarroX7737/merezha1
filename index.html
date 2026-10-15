@@ -231,6 +231,7 @@ body { font-size: 15px; }
 #chips .chip .ico { width: 36px; height: 28px; }
 #chips .chip[aria-pressed="true"] { background: var(--accent); color: var(--accent-ink); }
 .bx, .sp { transform: scale(var(--iz, 1)); transition: transform .15s ease-out; }
+.mvh { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; border: 2px solid #fff; box-shadow: 0 1px 6px rgba(0,0,0,.5); cursor: grab; touch-action: none; }
 </style>
 </head>
 <body>
@@ -564,6 +565,13 @@ body { font-size: 15px; }
     var id = uid(), o = { id: id, kind: 'sub', boxId: boxId, name: 'Абонент ' + n, status: 'built', address: '', desc: '', date: '', pts: pts, photos: [] };
     objs.set(id, o); queueSave(id, 0); updateStats(); select(id); fillAddress(id);
   }
+  var extendId = null, extendEnd = 'end';
+  function startExtend(id, end) {
+    var o = objs.get(id); if (!o || o.kind !== 'line') return;
+    extendId = id; extendEnd = end; setTool('line');
+    draft = [end === 'start' ? o.pts[0].slice() : o.pts[o.pts.length - 1].slice()]; drawDraft();
+    toast('Торкайтесь карти, щоб додати точки. Потім «Готово».', 3500);
+  }
   function startSub(boxId) {
     var b = objs.get(boxId); if (!b) return;
     subFrom = boxId; setTool('sub'); draft = [[b.lng, b.lat]]; drawDraft();
@@ -638,6 +646,23 @@ body { font-size: 15px; }
       });
       m.addTo(gHandles);
     });
+    if (o.kind === 'line') {
+      var half = lineLen(o.pts) / 2, acc = 0, hp = o.pts[0];
+      for (var k = 1; k < o.pts.length; k++) {
+        var dd = dist(o.pts[k - 1], o.pts[k]);
+        if (acc + dd >= half) { var fr = dd ? (half - acc) / dd : 0; hp = [o.pts[k - 1][0] + (o.pts[k][0] - o.pts[k - 1][0]) * fr, o.pts[k - 1][1] + (o.pts[k][1] - o.pts[k - 1][1]) * fr]; break; }
+        acc += dd;
+      }
+      var mv = L.marker(LL(hp), { icon: L.divIcon({ className: '', html: '<div class="mvh" title="Перемістити всю лінію"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="#fff" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v18M3 12h18M12 3l-3 3M12 3l3 3M12 21l-3-3M12 21l3-3M3 12l3-3M3 12l3 3M21 12l-3-3M21 12l-3 3"/></svg></div>', iconSize: [34, 34], iconAnchor: [17, 50] }), draggable: true, bubblingMouseEvents: false, keyboard: false });
+      var mvStart = null, mvOrig = null;
+      mv.on('dragstart', function () {
+        mvStart = mv.getLatLng(); mvOrig = o.pts.map(function (p) { return p.slice(); });
+        var ls = []; gHandles.eachLayer(function (l) { if (l !== mv) ls.push(l); }); ls.forEach(function (l) { gHandles.removeLayer(l); });
+      });
+      mv.on('drag', function () { var q = mv.getLatLng(), dx = q.lng - mvStart.lng, dy = q.lat - mvStart.lat; o.pts = mvOrig.map(function (p) { return [p[0] + dx, p[1] + dy]; }); setLineGeom(id); });
+      mv.on('dragend', function () { queueSave(id, 100); updateStats(); rebuildHandles(); });
+      mv.addTo(gHandles);
+    }
   }
 
   function onObjClick(id, ll, isBox) {
@@ -666,11 +691,16 @@ body { font-size: 15px; }
       draft.forEach(function (p) { L.circleMarker(LL(p), { radius: 5, color: '#fff', weight: 2, fillColor: '#0a7b76', fillOpacity: 1, interactive: false }).addTo(gDraft); });
     }
     $('#draftbar').hidden = !draft.length;
-    $('#draftInfo').textContent = (tool === 'sub' ? 'Лінія абонента · ' : 'Нова лінія · ') + draft.length + ' ' + plural(draft.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(draft));
-    $('#draftUndo').disabled = tool === 'sub' ? draft.length < 2 : !draft.length; $('#draftUndo').style.opacity = $('#draftUndo').disabled ? .5 : 1; $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
+    $('#draftInfo').textContent = (tool === 'sub' ? 'Лінія абонента · ' : extendId ? 'Продовження лінії · ' : 'Нова лінія · ') + draft.length + ' ' + plural(draft.length, ['точка', 'точки', 'точок']) + ' · ' + fmtLen(lineLen(draft));
+    $('#draftUndo').disabled = (tool === 'sub' || extendId) ? draft.length < 2 : !draft.length; $('#draftUndo').style.opacity = $('#draftUndo').disabled ? .5 : 1; $('#draftDone').disabled = draft.length < 2; $('#draftDone').style.opacity = draft.length < 2 ? .5 : 1;
   }
   function finishLine() {
     if (draft.length < 2) { toast('Потрібно щонайменше дві точки'); return; }
+    if (extendId) {
+      var eid = extendId, eo = objs.get(eid), add = draft.slice(1); extendId = null; draft = []; drawDraft(); setTool('select');
+      if (eo) { eo.pts = extendEnd === 'start' ? add.reverse().concat(eo.pts) : eo.pts.concat(add); draw(eid); queueSave(eid, 0); updateStats(); select(eid); }
+      return;
+    }
     if (tool === 'sub') { var from = subFrom, spts = draft.slice(); draft = []; drawDraft(); setTool('select'); if (from && objs.get(from)) createSub(from, spts); return; }
     var n = 1; objs.forEach(function (x) { if (x.kind === 'line') n++; });
     var id = uid(), o = { id: id, kind: 'line', name: 'Магістраль ' + n, status: 'plan', laying: 'aerial', cable: '', fibers: lastFibers, desc: '', date: '', pts: draft.slice(), photos: [] };
@@ -678,9 +708,10 @@ body { font-size: 15px; }
   }
   function cancelDraft() {
     draft = []; drawDraft();
+    if (extendId) { var xid = extendId; extendId = null; setTool('select'); if (objs.get(xid)) select(xid); return; }
     if (tool === 'sub') { var b = subFrom; setTool('select'); if (b && objs.get(b)) select(b); }
   }
-  $('#draftUndo').onclick = function () { if (tool === 'sub' ? draft.length > 1 : draft.length) { draft.pop(); if (rubber) { gDraft.removeLayer(rubber); rubber = null; } drawDraft(); } };
+  $('#draftUndo').onclick = function () { if ((tool === 'sub' || extendId) ? draft.length > 1 : draft.length) { draft.pop(); if (rubber) { gDraft.removeLayer(rubber); rubber = null; } drawDraft(); } };
   $('#draftDone').onclick = finishLine; $('#draftCancel').onclick = cancelDraft;
 
   /* ---------- інструменти ---------- */
@@ -768,6 +799,7 @@ body { font-size: 15px; }
       h += '<div class="f"><label for="f-cable">Марка кабелю</label><input id="f-cable" data-f="cable" type="text" value="' + esc(o.cable) + '" placeholder="наприклад, ОКЛ-24"></div>';
       h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка (стане жовтим), щоб його видалити.</p>';
       if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
+      h += '<div class="f"><span class="lab">Редагування лінії</span><p class="note">Тягніть білі кружечки, щоб змінити форму. Торкніться маленької цятки між ними, щоб додати точку. Тягніть синю кнопку з хрестиком, щоб перемістити всю лінію.</p><div class="row2"><button class="btn" data-act="extend" data-v="end">+ Продовжити з кінця</button><button class="btn" data-act="extend" data-v="start">+ Продовжити з початку</button></div></div>';
     } else {
       h += '<div class="f"><label for="f-type">Тип</label><select id="f-type" data-f="type">' + opts(BOXVIS, BOX_HIDDEN[o.type] ? 'fob' : o.type) + '</select></div>';
       if (o.type === 'olt') {
@@ -836,6 +868,7 @@ body { font-size: 15px; }
     else if (act === 'lcolor' && o) { o.color = b.dataset.v; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'lcolorreset' && o) { delete o.color; draw(sel); rebuildHandles(); queueSave(sel, 100); refreshPanel(); }
     else if (act === 'ports' && o) { o.ports = parseInt(b.dataset.v, 10); if (!o.pons) o.pons = []; while (o.pons.length < 8) o.pons.push(''); draw(sel); var sp = shapes.get(sel); if (sp && sp.marker) sp.marker.dragging.enable(); queueSave(sel, 100); refreshPanel(); }
+    else if (act === 'extend' && o && o.kind === 'line') startExtend(sel, b.dataset.v);
     else if (act === 'copy' && o) copyCoord(o);
     else if (act === 'addphoto') $('#photoIn').click();
     else if (act === 'photo') openLightbox(parseInt(b.dataset.i, 10));
