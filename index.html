@@ -149,6 +149,12 @@ button { cursor: pointer; }
 #lightbox .lb-top .btn { background: rgba(255,255,255,.1); color: #fff; border-color: rgba(255,255,255,.25); }
 #lightbox .lb-img { display: grid; place-items: center; min-height: 0; padding: 0 var(--gr) 16px var(--gl); }
 #lightbox img { max-width: 100%; max-height: 100%; object-fit: contain; border-radius: 6px; }
+#login { position: fixed; inset: 0; z-index: 7000; background: rgba(5,10,14,.72); display: grid; place-items: center; padding: 16px; }
+#login .card { width: min(380px, 100%); max-height: 100%; overflow-y: auto; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 8px; box-shadow: var(--shadow); }
+#login h2 { margin: 0; font-size: 17px; }
+#login label { font-size: 12px; font-weight: 600; color: var(--muted); }
+#login input { width: 100%; min-width: 0; border: 1px solid var(--line); background: var(--bg); border-radius: 8px; padding: 10px; }
+#login input:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 2px color-mix(in srgb, var(--accent) 30%, transparent); }
 #toast { position: fixed; left: 50%; bottom: 120px; transform: translateX(-50%); background: var(--ink); color: var(--bg); border-radius: 10px; padding: 9px 14px; font-size: 13px; box-shadow: var(--shadow); z-index: 6000; max-width: calc(100% - 32px); text-align: center; }
 #banner { background: var(--bad); color: #fff; padding: 6px var(--gr) 6px var(--gl); font-size: 12.5px; }
 
@@ -198,6 +204,8 @@ button { cursor: pointer; }
     <div id="menu" hidden>
       <button class="btn" id="mFit">Показати обидві області</button>
       <button class="btn" id="mFitObj">Показати мої об'єкти</button>
+      <button class="btn" id="mCloud">Хмара: вхід і налаштування</button>
+      <button class="btn" id="mLogout">Вийти з хмари</button>
       <div class="goto"><input id="gotoIn" type="text" inputmode="decimal" placeholder="50.4501, 30.5234" aria-label="Координати"><button class="btn" id="gotoBtn">Перейти</button></div>
       <hr>
       <button class="btn" id="mBackup">Зберегти резервну копію (з фото)</button>
@@ -218,12 +226,32 @@ button { cursor: pointer; }
   </div>
   <div class="lb-img"><img id="lbImg" alt="Фото"></div>
 </div>
+<div id="login" hidden>
+  <div class="card" role="dialog" aria-labelledby="loginTitle">
+    <h2 id="loginTitle">Вхід у хмару</h2>
+    <p class="note">Після входу карта буде спільною на всіх ваших пристроях.</p>
+    <div id="cfgBox" style="display:grid;gap:8px" hidden>
+      <label for="cfgUrl">Адреса проєкту (Project URL)</label>
+      <input id="cfgUrl" type="url" placeholder="https://xxxx.supabase.co" autocomplete="off">
+      <label for="cfgKey">Публічний ключ (anon key)</label>
+      <input id="cfgKey" type="text" placeholder="eyJ… або sb_publishable_…" autocomplete="off">
+    </div>
+    <label for="authEmail">Пошта</label>
+    <input id="authEmail" type="email" autocomplete="username">
+    <label for="authPass">Пароль</label>
+    <input id="authPass" type="password" autocomplete="current-password">
+    <p id="loginMsg" class="note" style="min-height:1.2em"></p>
+    <button class="btn primary block" id="loginGo">Увійти</button>
+    <button class="btn block" id="loginSkip">Працювати без хмари</button>
+  </div>
+</div>
 <div id="toast" hidden></div>
 <input type="file" id="photoIn" accept="image/*" multiple hidden>
 <input type="file" id="restoreIn" accept=".json,application/json" hidden>
 <input type="file" id="impIn" accept=".json,.geojson,application/json,application/geo+json" hidden>
 
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
 <script>
 (function () {
   'use strict';
@@ -389,13 +417,13 @@ button { cursor: pointer; }
   /* ---------- збереження ---------- */
   function queueSave(id, delay) {
     clearTimeout(saveT.get(id));
-    saveT.set(id, setTimeout(function () { saveT.delete(id); var o = objs.get(id); if (o) dbPut('objs', JSON.parse(JSON.stringify(o))).catch(function () { toast('Не вдалося зберегти зміни.'); }); }, delay == null ? 400 : delay));
+    saveT.set(id, setTimeout(function () { saveT.delete(id); var o = objs.get(id); if (o) { dbPut('objs', JSON.parse(JSON.stringify(o))).catch(function () { toast('Не вдалося зберегти зміни.'); }); cloudPut(id); } }, delay == null ? 400 : delay));
   }
   function removeObj(id) {
     var o = objs.get(id); if (!o) return;
     if (o.kind === 'box') Array.from(objs.values()).forEach(function (x) { if (x.kind === 'sub' && x.boxId === id) removeObj(x.id); });
     objs.delete(id); clearTimeout(saveT.get(id)); undraw(id);
-    dbDel('objs', id); (o.photos || []).forEach(function (p) { dbDel('photos', p.id); });
+    dbDel('objs', id); (o.photos || []).forEach(function (p) { dbDel('photos', p.id); }); cloudDel(id, (o.photos || []).map(function (p) { return p.id; }));
   }
 
   /* ---------- малювання об'єктів ---------- */
@@ -474,7 +502,7 @@ button { cursor: pointer; }
   function updateStats() {
     var b = 0, l = 0, len = 0, sc = 0;
     objs.forEach(function (o) { if (o.kind === 'box') b++; else if (o.kind === 'sub') sc++; else { l++; len += lineLen(o.pts || []); } });
-    $('#stats').textContent = b + ' ' + plural(b, ['бокс', 'бокси', 'боксів']) + ' · ' + l + ' ' + plural(l, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(len) + (sc ? ' · ' + sc + ' ' + plural(sc, ['абонент', 'абоненти', 'абонентів']) : '');
+    $('#stats').textContent = b + ' ' + plural(b, ['бокс', 'бокси', 'боксів']) + ' · ' + l + ' ' + plural(l, ['лінія', 'лінії', 'ліній']) + ' · ' + fmtLen(len) + (sc ? ' · ' + sc + ' ' + plural(sc, ['абонент', 'абоненти', 'абонентів']) : '') + (cloudLabel ? ' · ' + cloudLabel : '');
   }
   function fitObjs() {
     var pts = [];
@@ -676,7 +704,11 @@ button { cursor: pointer; }
   var urlCache = new Map();
   async function photoURL(id) {
     if (urlCache.has(id)) return urlCache.get(id);
-    var r = await dbGetPhoto(id); if (!r) return null;
+    var r = await dbGetPhoto(id);
+    if (!r && cloudReady && sb) {
+      try { var d = await sb.storage.from('photos').download(id); if (d.data) { r = { id: id, blob: d.data }; await putPhoto(r); uploadedPhotos.add(id); } } catch (e) {}
+    }
+    if (!r) return null;
     var u = URL.createObjectURL(r.blob); urlCache.set(id, u); return u;
   }
   function hydrate(root) { root.querySelectorAll('img[data-pid]').forEach(function (im) { photoURL(im.dataset.pid).then(function (u) { if (u) im.src = u; }); }); }
@@ -758,7 +790,7 @@ button { cursor: pointer; }
     var b = $('#lbDel'), o = sel && objs.get(sel); if (!o) return;
     if (!b.dataset.armed) { b.dataset.armed = '1'; b.textContent = 'Точно видалити?'; setTimeout(function () { delete b.dataset.armed; b.textContent = 'Видалити'; }, 3000); return; }
     delete b.dataset.armed; b.textContent = 'Видалити';
-    var p = o.photos.splice(lbIdx, 1)[0]; if (p) { dbDel('photos', p.id); urlCache.delete(p.id); }
+    var p = o.photos.splice(lbIdx, 1)[0]; if (p) { dbDel('photos', p.id); urlCache.delete(p.id); if (cloudReady && sb) sb.storage.from('photos').remove([p.id]).catch(function () {}); }
     queueSave(sel, 0); refreshPanel(); lbShow();
   };
 
@@ -780,7 +812,7 @@ button { cursor: pointer; }
     menu.hidden = true; toast('Готую копію…', 15000);
     var out = { app: 'merezha', version: 1, objects: [], photos: {} };
     for (const o of objs.values()) { out.objects.push(o); for (const p of (o.photos || [])) { var r = await dbGetPhoto(p.id); if (r) out.photos[p.id] = await blobToDataURL(r.blob); } }
-    download('merezha-kopiya-' + stamp() + '.json', JSON.stringify(out), 'application/json'); toast('Копію збережено у завантаження');
+    download('merezha-kopiya-' + stamp() + '.json', JSON.stringify(out), 'application/json'); try { localStorage.setItem('mm-lastbackup', String(Date.now())); } catch (e) {} toast('Копію збережено у завантаження. Надішліть її собі в Telegram чи на пошту.', 6000);
   };
   $('#mRestore').onclick = function () { menu.hidden = true; $('#restoreIn').click(); };
   $('#restoreIn').addEventListener('change', async function (e) {
@@ -788,7 +820,7 @@ button { cursor: pointer; }
     try {
       var d = JSON.parse(await f.text()); if (d.app !== 'merezha') throw new Error('x');
       for (var pid in d.photos) { var blob = await (await fetch(d.photos[pid])).blob(); await putPhoto({ id: pid, blob: blob }); }
-      d.objects.forEach(function (o) { objs.set(o.id, o); dbPut('objs', o); draw(o.id); });
+      d.objects.forEach(function (o) { objs.set(o.id, o); dbPut('objs', o); draw(o.id); queueSave(o.id, 0); });
       updateStats(); fitObjs(); toast('Відновлено об’єктів: ' + d.objects.length);
     } catch (err) { toast('Це не файл резервної копії.', 3500); }
   });
@@ -838,10 +870,11 @@ button { cursor: pointer; }
   }
   async function loadPower() {
     if (!powerOn) return;
-    if (map.getZoom() < 14) { gPower.clearLayers(); powerBox = null; toast('Наблизьте карту, щоб побачити лінії й опори', 2500); return; }
+    if (map.getZoom() < 15) { gPower.clearLayers(); powerBox = null; toast('Наблизьте карту, щоб побачити лінії й опори', 2500); return; }
     var view = map.getBounds();
     if (powerBox && powerBox.contains(view)) return;
-    var bb = view.pad(0.25), q = '[out:json][timeout:25];(way["power"~"^(line|minor_line)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + ');node["power"~"^(pole|tower)$"](' + bb.getSouth() + ',' + bb.getWest() + ',' + bb.getNorth() + ',' + bb.getEast() + '););out geom 6000;';
+    var bb = view.pad(0.1), bx = '(' + bb.getSouth().toFixed(5) + ',' + bb.getWest().toFixed(5) + ',' + bb.getNorth().toFixed(5) + ',' + bb.getEast().toFixed(5) + ')';
+    var q = '[out:json][timeout:15];(way["power"="line"]' + bx + ';way["power"="minor_line"]' + bx + ';node["power"="pole"]' + bx + ';node["power"="tower"]' + bx + ';);out geom 3000;';
     if (powerCtl) powerCtl.abort(); powerCtl = new AbortController();
     try {
       var j = await overpass(q, powerCtl.signal); if (!powerOn) return;
@@ -867,16 +900,168 @@ button { cursor: pointer; }
   map.on('moveend', function () { if (powerOn) { clearTimeout(powerT); powerT = setTimeout(loadPower, 700); } });
   try { if (localStorage.getItem('mm-power') === '1') { powerOn = true; setPowerBtn(); setTimeout(loadPower, 1500); } } catch (e) {}
 
+  /* ---------- хмара (Supabase): одна карта на всіх пристроях ---------- */
+  var SUPA = { url: 'https://dmfkqdngwkzjjplwwkcv.supabase.co', key: 'sb_publishable_NylFoO4InE6qVAzp1YR1pQ_OUJQOvIu' }; // можна вписати сюди, щоб не вводити на кожному пристрої
+  var sb = null, cloudReady = false, cloudLabel = '', rtChan = null;
+  var cloudChain = new Map(), ownStamp = new Map();
+  function lsGet(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
+  function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
+  var dirty = new Set(lsGet('mm-dirty', [])), tomb = new Set(lsGet('mm-tomb', [])), syncedIds = new Set(lsGet('mm-synced', [])), uploadedPhotos = new Set(lsGet('mm-photos-up', []));
+  function persistSets() { lsSet('mm-dirty', Array.from(dirty)); lsSet('mm-tomb', Array.from(tomb)); lsSet('mm-synced', Array.from(syncedIds)); }
+  function setCloud(label) { cloudLabel = label; updateStats(); }
+  function supaCfg() {
+    var c = { url: SUPA.url, key: SUPA.key };
+    if (!c.url || !c.key) { var s = lsGet('mm-supa', null); if (s) { c.url = s.url; c.key = s.key; } }
+    return c;
+  }
+  function makeClient() {
+    var cfg = supaCfg(); if (!cfg.url || !cfg.key || !window.supabase) return false;
+    sb = window.supabase.createClient(cfg.url, cfg.key, { auth: { persistSession: true, autoRefreshToken: true } });
+    sb.auth.onAuthStateChange(function (ev) { if (ev === 'SIGNED_OUT') { cloudReady = false; setCloud('локально'); } });
+    return true;
+  }
+
+  async function uploadPhotosOf(o) {
+    for (const p of (o.photos || [])) {
+      if (uploadedPhotos.has(p.id)) continue;
+      var rec = await dbGetPhoto(p.id); if (!rec) continue;
+      var r = await sb.storage.from('photos').upload(p.id, rec.blob, { contentType: 'image/jpeg', upsert: true });
+      if (r.error) throw r.error;
+      uploadedPhotos.add(p.id); lsSet('mm-photos-up', Array.from(uploadedPhotos));
+    }
+  }
+  function cloudPut(id) {
+    dirty.add(id); persistSets();
+    if (!cloudReady) return Promise.resolve();
+    var p = (cloudChain.get(id) || Promise.resolve()).then(async function () {
+      var o = objs.get(id); if (!o) { dirty.delete(id); persistSets(); return; }
+      try {
+        await uploadPhotosOf(o);
+        var stamp = Date.now(); ownStamp.set(id, stamp);
+        var r = await sb.from('objects').upsert({ id: id, data: JSON.parse(JSON.stringify(o)), updated_at: new Date(stamp).toISOString() });
+        if (r.error) throw r.error;
+        dirty.delete(id); syncedIds.add(id); persistSets(); setCloud('☁ збережено');
+      } catch (e) { setCloud('☁ немає зв’язку, збережено на пристрої'); }
+    });
+    cloudChain.set(id, p); return p;
+  }
+  async function cloudDel(id, photoIds) {
+    dirty.delete(id);
+    if (!cloudReady) { tomb.add(id); persistSets(); return; }
+    try {
+      var r = await sb.from('objects').delete().eq('id', id); if (r.error) throw r.error;
+      tomb.delete(id); syncedIds.delete(id); persistSets();
+      if (photoIds && photoIds.length) sb.storage.from('photos').remove(photoIds).catch(function () {});
+    } catch (e) { tomb.add(id); persistSets(); setCloud('☁ немає зв’язку, збережено на пристрої'); }
+  }
+
+  async function syncAll() {
+    if (!sb || !cloudReady) return;
+    setCloud('☁ синхронізація…');
+    try {
+      var r = await sb.from('objects').select('id,data,updated_at'); if (r.error) throw r.error;
+      var remote = new Map(); (r.data || []).forEach(function (row) { remote.set(row.id, row); });
+      for (const id of Array.from(tomb)) { var dr = await sb.from('objects').delete().eq('id', id); if (!dr.error) { tomb.delete(id); remote.delete(id); } }
+      remote.forEach(function (row, id) {
+        if (dirty.has(id) && objs.has(id)) return;
+        objs.set(id, row.data); dbPut('objs', JSON.parse(JSON.stringify(row.data))); draw(id); syncedIds.add(id);
+      });
+      Array.from(objs.keys()).forEach(function (id) {
+        if (remote.has(id)) return;
+        if (syncedIds.has(id) && !dirty.has(id)) { objs.delete(id); undraw(id); dbDel('objs', id); syncedIds.delete(id); }
+        else dirty.add(id);
+      });
+      persistSets();
+      for (const id of Array.from(dirty)) await cloudPut(id);
+      updateStats(); if (sel && !objs.get(sel)) deselect();
+      setCloud(dirty.size || tomb.size ? '☁ частину не збережено' : '☁ синхронізовано');
+      subscribeRT();
+    } catch (e) { setCloud('☁ немає зв’язку'); }
+  }
+
+  function subscribeRT() {
+    if (rtChan || !sb) return;
+    rtChan = sb.channel('objs-live').on('postgres_changes', { event: '*', schema: 'public', table: 'objects' }, function (p) {
+      if (p.eventType === 'DELETE') {
+        var did = p.old && p.old.id; if (!did || !objs.has(did)) return;
+        if (sel === did) deselect();
+        objs.delete(did); undraw(did); dbDel('objs', did); syncedIds.delete(did); persistSets(); updateStats(); return;
+      }
+      var row = p.new; if (!row || !row.id) return;
+      if (saveT.has(row.id) || dirty.has(row.id)) return;
+      if (ownStamp.get(row.id) === Date.parse(row.updated_at)) return;
+      var typing = sel === row.id && panel.contains(document.activeElement);
+      objs.set(row.id, row.data); dbPut('objs', JSON.parse(JSON.stringify(row.data))); syncedIds.add(row.id);
+      draw(row.id); updateStats();
+      if (sel === row.id && !typing) { rebuildHandles(); refreshPanel(); }
+    }).subscribe();
+  }
+
+  /* вхід */
+  var loginEl = $('#login');
+  function showLogin(forceCfg) {
+    var cfg = supaCfg(), needCfg = forceCfg || !cfg.url || !cfg.key;
+    $('#cfgBox').hidden = !needCfg; $('#cfgUrl').value = cfg.url || ''; $('#cfgKey').value = cfg.key || '';
+    $('#loginMsg').textContent = ''; loginEl.hidden = false;
+  }
+  $('#loginSkip').onclick = function () { loginEl.hidden = true; lsSet('mm-nocloud', 1); setCloud('локально, без хмари'); };
+  $('#loginGo').onclick = async function () {
+    var msg = $('#loginMsg'), btn = $('#loginGo');
+    if (!$('#cfgBox').hidden) {
+      var url = $('#cfgUrl').value.trim().replace(/\/+$/, ''), key = $('#cfgKey').value.trim();
+      if (!/^https:\/\/.+\..+/.test(url) || key.length < 20) { msg.textContent = 'Перевірте адресу проєкту (https://….supabase.co) і ключ.'; return; }
+      lsSet('mm-supa', { url: url, key: key }); sb = null; rtChan = null;
+    }
+    var email = $('#authEmail').value.trim(), pass = $('#authPass').value;
+    if (!email || !pass) { msg.textContent = 'Введіть пошту і пароль.'; return; }
+    if (!window.supabase) { msg.textContent = 'Бібліотеку хмари не завантажено. Перевірте інтернет і оновіть сторінку.'; return; }
+    if (!sb && !makeClient()) { msg.textContent = 'Не вистачає адреси проєкту або ключа.'; return; }
+    btn.disabled = true; msg.textContent = 'Вхід…';
+    try {
+      var r = await sb.auth.signInWithPassword({ email: email, password: pass });
+      if (r.error) { msg.textContent = /invalid/i.test(r.error.message) ? 'Невірна пошта чи пароль.' : 'Не вдалося увійти: ' + r.error.message; return; }
+      loginEl.hidden = true; $('#authPass').value = ''; lsSet('mm-nocloud', 0); cloudReady = true; toast('Вхід виконано');
+      await syncAll();
+    } catch (e) { msg.textContent = 'Немає зв’язку з хмарою. Перевірте інтернет і адресу проєкту.'; }
+    finally { btn.disabled = false; }
+  };
+  $('#mCloud').onclick = function () { menu.hidden = true; showLogin(true); };
+  $('#mLogout').onclick = async function () {
+    menu.hidden = true; if (!sb) { toast('Хмара не підключена'); return; }
+    try { await sb.auth.signOut(); } catch (e) {}
+    cloudReady = false; if (rtChan) { try { sb.removeChannel(rtChan); } catch (e) {} rtChan = null; }
+    setCloud('локально'); toast('Ви вийшли з хмари. Дані лишились на цьому пристрої.', 3500);
+  };
+  async function startCloud() {
+    var cfg = supaCfg();
+    if (!cfg.url || !cfg.key) { setCloud('локально'); if (!lsGet('mm-nocloud', 0)) showLogin(); return; }
+    if (!window.supabase) { setCloud('локально (хмара недоступна)'); return; }
+    if (!sb) makeClient();
+    try {
+      var s = await sb.auth.getSession();
+      if (s.data && s.data.session) { cloudReady = true; await syncAll(); } else { setCloud('локально, потрібен вхід'); showLogin(); }
+    } catch (e) { setCloud('☁ немає зв’язку'); }
+  }
+  async function retryCloud() {
+    if (!sb) return;
+    try { var s = await sb.auth.getSession(); if (s.data && s.data.session) { cloudReady = true; await syncAll(); } } catch (e) {}
+  }
+  window.addEventListener('online', function () { if (sb && !cloudReady) retryCloud(); else if (cloudReady) syncAll(); });
+  setInterval(function () { if (cloudReady && (dirty.size || tomb.size)) syncAll(); }, 30000);
+
   /* ---------- запуск ---------- */
   async function init() {
     buildChips(); setTool('select'); drawDraft();
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
     try { dbp = openDb(); await dbp; } catch (e) { memMode = true; $('#banner').hidden = false; $('#banner').textContent = 'Браузер не дозволяє зберігати дані (приватне вікно?). Зміни зникнуть після закриття сторінки.'; }
     var rows = await dbAll('objs').catch(function () { return []; });
     rows.forEach(function (o) { objs.set(o.id, o); draw(o.id); });
     updateStats(); if (rows.length && !restored) fitObjs();
+    if (rows.length) { var lb = 0; try { lb = +localStorage.getItem('mm-lastbackup') || 0; } catch (e) {} if (Date.now() - lb > 3 * 864e5) setTimeout(function () { toast('Давно не було резервної копії. Меню → Зберегти резервну копію.', 7000); }, 2500); }
     loadOblasts();
+    startCloud();
   }
-  window.addEventListener('beforeunload', function () { saveT.forEach(function (_, id) { var o = objs.get(id); if (o) dbPut('objs', JSON.parse(JSON.stringify(o))); }); });
+  window.addEventListener('beforeunload', function () { saveT.forEach(function (_, id) { var o = objs.get(id); if (o) { dbPut('objs', JSON.parse(JSON.stringify(o))); dirty.add(id); } }); persistSets(); });
   init();
 })();
 </script>
