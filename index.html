@@ -424,6 +424,7 @@ table.tb tr.sum td { font-weight: 700; }
       case 'fob': default: return '<image href="' + FOB + '" x="-14" y="-14" width="28" height="28"/><circle cx="8.5" cy="11.5" r="2.7" style="fill:var(--c);stroke:#fff;stroke-width:1.2"/>';
       case 'cabinet': return '<image href="' + SRV + '" x="-14" y="-14" width="28" height="28"/><circle cx="9.5" cy="11" r="2.7" style="fill:var(--c);stroke:#fff;stroke-width:1.2"/>';
       case 'manhole': return '<image href="' + MAN + '" x="-14" y="-14" width="28" height="28"/><circle cx="10" cy="6" r="2.7" style="fill:var(--c);stroke:#fff;stroke-width:1.2"/>';
+      case 'house': return '<image href="' + HOUSE + '" x="-13" y="-13" width="26" height="26"/>';
       case 'pole': return '<path class="sym" d="M0 -10 L9.5 7 L-9.5 7 Z"/>';
     }
   }
@@ -643,6 +644,7 @@ table.tb tr.sum td { font-weight: 700; }
   /* ---------- абоненти: лінії видно, лише поки вибраний їхній бокс ---------- */
   var peekBox = null;
   function subVisible(o) {
+    if (!o.boxId) return true;
     if (peekBox && o.boxId === peekBox) return true;
     if (!sel) return false;
     if (sel === o.id || sel === o.boxId) return true;
@@ -795,6 +797,7 @@ table.tb tr.sum td { font-weight: 700; }
     if (tool === 'select') { if (peekBox) { peekBox = null; redrawSubs(); } if (sel) deselect(); return; }
     if (tool === 'measure') { mpts.push(snapPt || snapBox(ll, 16) || [ll.lng, ll.lat]); drawMeas(); return; }
     if (tool === 'line' || tool === 'sub') { draft.push(snapPt || (tool === 'line' ? snapBox(ll, 16) : null) || [ll.lng, ll.lat]); drawDraft(); return; }
+    if (tool === 'box' && boxType === 'house') { createSub('', [[ll.lng, ll.lat]]); setTool('select'); return; }
     if (tool === 'box') {
       var q = snapPt || [ll.lng, ll.lat], n = 1; objs.forEach(function (x) { if (x.kind === 'box' && x.type === boxType) n++; });
       var id = uid(), o = { id: id, kind: 'box', type: boxType, name: BOX[boxType] + ' ' + n, status: 'plan', lng: q[0], lat: q[1], address: '', desc: '', date: '', photos: [] };
@@ -863,9 +866,9 @@ table.tb tr.sum td { font-weight: 700; }
   $('#measUndo').onclick = function () { mpts.pop(); drawMeas(); };
   $('#measClear').onclick = function () { mpts = []; drawMeas(); };
   $('#measDone').onclick = function () { mpts = []; setTool('select'); drawMeas(); };
-  function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + BOX[k] + '</button>'; }).join(''); }
+  function buildChips() { $('#chips').innerHTML = Object.keys(BOX).filter(function (k) { return !BOX_HIDDEN[k]; }).concat(['house']).map(function (k) { return '<button class="chip" data-type="' + k + '" aria-pressed="' + (k === boxType) + '">' + ico(k, 'built') + (k === 'house' ? 'Абонент (будинок)' : BOX[k]) + '</button>'; }).join(''); }
   var chipsOpen = false;
-  function boxHint() { return 'Зараз: ' + BOX[boxType] + '. Оберіть тип у списку, потім торкніться карти. Список відкривається кнопкою «Меню ▾».'; }
+  function boxHint() { return 'Зараз: ' + (boxType === 'house' ? 'Абонент (будинок)' : BOX[boxType]) + '. Оберіть тип у списку, потім торкніться карти. Список відкривається кнопкою «Меню ▾».'; }
   function setTool(t) {
     if (RO && (t === 'line' || t === 'box' || t === 'sub')) t = 'select';
     if ((tool === 'line' || tool === 'sub') && t !== tool && draft.length) cancelDraft();
@@ -915,9 +918,11 @@ table.tb tr.sum td { font-weight: 700; }
     h += '<div class="f"><label for="f-address">Адреса</label><div class="coord"><input id="f-address" data-f="address" type="text" value="' + esc(o.address) + '" placeholder="вулиця, будинок, квартира" autocomplete="off"><button class="btn" data-act="geo">З карти</button></div></div>';
     h += '<div class="f"><label for="f-desc">Опис</label><textarea id="f-desc" data-f="desc" placeholder="Телефон, тариф, обладнання, де заходить кабель">' + esc(o.desc) + '</textarea></div>';
     h += '<div class="f"><label for="f-date">Дата підключення</label><input id="f-date" data-f="date" type="date" value="' + esc(o.date) + '"></div>';
+    if (box) {
     h += '<div class="len"><span class="lab">Довжина лінії</span><b id="pLen">' + fmtLen(lineLen(o.pts)) + '</b></div>';
     h += styleBlock(o);
     h += '<p class="note">Тягніть білі кружечки, щоб змінити трасу. Маленька цяточка між ними додає нову точку. Торкніться кружечка, щоб вибрати його.</p>';
+    }
     if (selVtx != null && o.pts.length > 2) h += '<button class="btn block" data-act="delvtx">Видалити вибрану точку</button>';
     h += '<div class="f"><span class="lab">Координати абонента</span><div class="coord"><code id="pCoord">' + pos.lat.toFixed(6) + ', ' + pos.lng.toFixed(6) + '</code><button class="btn" data-act="copy">Копіювати</button></div></div>';
     h += photosBlock(o);
